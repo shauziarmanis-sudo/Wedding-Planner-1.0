@@ -10,10 +10,11 @@ export class GoogleSheetsService {
   constructor(accessToken: string) {
     const auth = new google.auth.OAuth2();
     auth.setCredentials({ access_token: accessToken });
-
     this.sheets = google.sheets({ version: 'v4', auth });
     this.drive = google.drive({ version: 'v3', auth });
   }
+
+  // ── Drive Operations ──
 
   async findSpreadsheet(): Promise<string | null> {
     return withRateLimit(async () => {
@@ -22,12 +23,8 @@ export class GoogleSheetsService {
         spaces: 'drive',
         fields: 'files(id, name)',
       });
-
       const files = response.data.files;
-      if (files && files.length > 0) {
-        return files[0].id || null;
-      }
-      return null;
+      return files && files.length > 0 ? files[0].id || null : null;
     });
   }
 
@@ -37,49 +34,73 @@ export class GoogleSheetsService {
         requestBody: initialSheetSchema as any,
         fields: 'spreadsheetId',
       });
-
       if (!response.data.spreadsheetId) {
         throw new Error('Failed to create spreadsheet');
       }
-
       return response.data.spreadsheetId;
     });
   }
 
-  async readRows(spreadsheetId: string, range: string): Promise<any[][] | null> {
+  // ── Sheet CRUD ──
+
+  async readRows(spreadsheetId: string, range: string): Promise<string[][] | null> {
     return withRateLimit(async () => {
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId,
         range,
       });
-
-      return response.data.values || null;
+      return (response.data.values as string[][]) || null;
     });
   }
 
-  async appendRow(spreadsheetId: string, range: string, values: any[]): Promise<void> {
-    return withRateLimit(async () => {
+  async appendRow(spreadsheetId: string, range: string, values: (string | number)[]): Promise<void> {
+    await withRateLimit(async () => {
       await this.sheets.spreadsheets.values.append({
         spreadsheetId,
         range,
         valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [values],
-        },
+        requestBody: { values: [values] },
       });
     });
   }
 
-  async updateRow(spreadsheetId: string, range: string, values: any[]): Promise<void> {
-    return withRateLimit(async () => {
+  async updateRow(spreadsheetId: string, range: string, values: (string | number)[]): Promise<void> {
+    await withRateLimit(async () => {
       await this.sheets.spreadsheets.values.update({
         spreadsheetId,
         range,
         valueInputOption: 'USER_ENTERED',
-        requestBody: {
-          values: [values],
-        },
+        requestBody: { values: [values] },
       });
     });
+  }
+
+  async clearRow(spreadsheetId: string, range: string): Promise<void> {
+    await withRateLimit(async () => {
+      await this.sheets.spreadsheets.values.clear({
+        spreadsheetId,
+        range,
+      });
+    });
+  }
+
+  /**
+   * Find a row by matching a value in a specific column.
+   * Returns the 1-based row index (sheet row number) or null.
+   */
+  async findRowIndex(
+    spreadsheetId: string,
+    sheetRange: string,
+    columnIndex: number,
+    searchValue: string
+  ): Promise<number | null> {
+    const rows = await this.readRows(spreadsheetId, sheetRange);
+    if (!rows) return null;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i][columnIndex] === searchValue) {
+        return i + 2; // +2 because row 1 is header, data starts at row 2, and i is 0-indexed
+      }
+    }
+    return null;
   }
 }
