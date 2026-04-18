@@ -41,6 +41,39 @@ export class GoogleSheetsService {
     });
   }
 
+  async addSheetWithHeaders(spreadsheetId: string, title: string, headers: string[]): Promise<void> {
+    await withRateLimit(async () => {
+      try {
+        // 1. Add the sheet
+        await this.sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                addSheet: {
+                  properties: { title },
+                },
+              },
+            ],
+          },
+        });
+        
+        // 2. Add headers
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${title}!A1`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [headers] },
+        });
+      } catch (error: any) {
+        // Ignore if sheet already exists
+        if (!error?.message?.includes("already exists")) {
+          throw error;
+        }
+      }
+    });
+  }
+
   // ── Sheet CRUD ──
 
   async readRows(spreadsheetId: string, range: string): Promise<string[][] | null> {
@@ -60,6 +93,17 @@ export class GoogleSheetsService {
         range,
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [values] },
+      });
+    });
+  }
+
+  async appendRows(spreadsheetId: string, range: string, rows: (string | number)[][]): Promise<void> {
+    await withRateLimit(async () => {
+      await this.sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: rows },
       });
     });
   }

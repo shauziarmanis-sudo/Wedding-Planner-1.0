@@ -78,7 +78,20 @@ export async function initChecklist(
 
   try {
     const service = new GoogleSheetsService(session.accessToken);
-    const existing = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
+    
+    // Ensure the sheet exists before trying to read it
+    await service.addSheetWithHeaders(
+      session.spreadsheetId, 
+      SHEETS_CONFIG.tabs.checklist, 
+      ['task_id', 'phase_label', 'days_before', 'category', 'title', 'description', 'adat_filter', 'is_required', 'status', 'completed_at', 'assignee', 'notes']
+    );
+
+    let existing: string[][] | null = null;
+    try {
+      existing = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
+    } catch (e) {
+      // ignore
+    }
 
     if (existing && existing.length > 0) {
       return { success: true, taskCount: existing.length, error: "Checklist sudah ada" };
@@ -88,23 +101,23 @@ export async function initChecklist(
       taskMatchesAdat(task.adat_filter, parsed.data.adat_type)
     );
 
-    for (const task of filtered) {
-      const taskId = `ck_${nanoid(8)}`;
-      await service.appendRow(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, [
-        taskId,
-        task.phase_label,
-        task.days_before,
-        task.category,
-        task.title,
-        task.description,
-        task.adat_filter,
-        task.is_required ? "TRUE" : "FALSE",
-        "BELUM",
-        "",
-        task.assignee,
-        "",
-      ]);
-    }
+    const rowsToAppend = filtered.map((task) => [
+      `ck_${nanoid(8)}`,
+      task.phase_label,
+      task.days_before,
+      task.category,
+      task.title,
+      task.description,
+      task.adat_filter,
+      task.is_required ? "TRUE" : "FALSE",
+      "BELUM",
+      "",
+      task.assignee,
+      "",
+    ]);
+
+    // Batch append all rows at once to avoid timeouts and rate limits
+    await service.appendRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, rowsToAppend);
 
     return { success: true, taskCount: filtered.length };
   } catch (error: unknown) {
