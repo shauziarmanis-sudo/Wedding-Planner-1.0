@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "next-auth/react";
-import { Heart, Users, Wallet, LogOut } from "lucide-react";
+import { Heart, Users, Wallet, LogOut, ListTodo } from "lucide-react";
 import WeddingDashboard from "./WeddingDashboard";
 import GuestListView from "./GuestListView";
 import FinanceDashboard from "./FinanceDashboard";
+import ChecklistDashboard from "../checklist/ChecklistDashboard";
 
-type TabKey = "wedding" | "guests" | "finance";
+type TabKey = "wedding" | "checklist" | "guests" | "finance";
 
 interface Props {
   userName: string;
@@ -18,9 +19,10 @@ interface Props {
 }
 
 const tabs = [
-  { key: "wedding" as TabKey, label: "Wedding Planner", icon: Heart },
+  { key: "wedding" as TabKey, label: "Overview", icon: Heart },
+  { key: "checklist" as TabKey, label: "Checklist", icon: ListTodo },
   { key: "guests" as TabKey, label: "Guest List", icon: Users },
-  { key: "finance" as TabKey, label: "Keuangan Keluarga", icon: Wallet },
+  { key: "finance" as TabKey, label: "Keuangan", icon: Wallet },
 ];
 
 const pageVariants = {
@@ -132,6 +134,7 @@ export default function DashboardClient({ userName, userEmail, userImage, status
             transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             {activeTab === "wedding" && <WeddingDashboard />}
+            {activeTab === "checklist" && <ChecklistDashboard />}
             {activeTab === "guests" && <GuestListView />}
             {activeTab === "finance" && <FinanceDashboard />}
           </motion.div>

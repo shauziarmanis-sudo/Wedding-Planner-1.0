@@ -7,6 +7,7 @@ export const SHEETS_CONFIG = {
     gifts: 'Gifts',
     transactions: 'Transactions',
     savings: 'SavingsGoals',
+    checklist: 'Checklist',
   },
   ranges: {
     metadata: 'Metadata!A2:F',
@@ -15,5 +16,6 @@ export const SHEETS_CONFIG = {
     gifts: 'Gifts!A2:E',
     transactions: 'Transactions!A2:F',
     savings: 'SavingsGoals!A2:E',
+    checklist: 'Checklist!A2:L',
   }
 };

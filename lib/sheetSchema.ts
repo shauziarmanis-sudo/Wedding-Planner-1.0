@@ -68,6 +68,29 @@ export const initialSheetSchema: SheetSchema = {
     },
     {
       properties: { title: SHEETS_CONFIG.tabs.savings },
+    },
+    {
+      properties: { title: SHEETS_CONFIG.tabs.checklist },
+      data: [{
+        rowData: [
+          {
+            values: [
+              { userEnteredValue: { stringValue: 'task_id' } },
+              { userEnteredValue: { stringValue: 'phase_label' } },
+              { userEnteredValue: { stringValue: 'days_before' } },
+              { userEnteredValue: { stringValue: 'category' } },
+              { userEnteredValue: { stringValue: 'title' } },
+              { userEnteredValue: { stringValue: 'description' } },
+              { userEnteredValue: { stringValue: 'adat_filter' } },
+              { userEnteredValue: { stringValue: 'is_required' } },
+              { userEnteredValue: { stringValue: 'status' } },
+              { userEnteredValue: { stringValue: 'completed_at' } },
+              { userEnteredValue: { stringValue: 'assignee' } },
+              { userEnteredValue: { stringValue: 'notes' } },
+            ]
+          }
+        ]
+      }]
     }
   ]
 };
