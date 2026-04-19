@@ -2,17 +2,12 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useTransition } from "react";
-import { CheckCircle2, ListTodo, Search, AlertTriangle } from "lucide-react";
+import { CheckCircle2, ListTodo, Search, AlertTriangle, Edit2, Check, X } from "lucide-react";
 import { ChecklistTask, TaskPhase, TaskAssignee, ChecklistProgress } from "@/types/checklist.types";
-import { getChecklist, getChecklistProgress } from "@/actions/checklist.actions";
+import { getChecklist, getChecklistProgress, renamePhase } from "@/actions/checklist.actions";
 import ChecklistOnboarding from "./ChecklistOnboarding";
 import ProgressRing from "./ProgressRing";
 import TaskCard from "./TaskCard";
-
-const phases: TaskPhase[] = [
-  "H-6 Bulan", "H-5 Bulan", "H-4 Bulan",
-  "H-3 Bulan", "H-2 Bulan", "H-1 Bulan"
-];
 
 const assignees: { label: string; value: TaskAssignee | "SEMUA" }[] = [
   { label: "Semua", value: "SEMUA" },
@@ -30,6 +25,11 @@ export default function ChecklistDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
 
+  // Rename state
+  const [editingPhase, setEditingPhase] = useState<TaskPhase | null>(null);
+  const [newPhaseName, setNewPhaseName] = useState("");
+  const [isPending, startTransition] = useTransition();
+
   useEffect(() => {
     loadData();
   }, []);
@@ -46,9 +46,29 @@ export default function ChecklistDashboard() {
     } else {
       setTasks(fetchedTasks);
       setProgress(fetchedProgress);
+      // Ensure activePhase is still valid, else default to first
+      if (fetchedProgress.length > 0 && !fetchedProgress.find(p => p.phase === activePhase)) {
+        setActivePhase(fetchedProgress[0].phase);
+      }
       setNeedsOnboarding(false);
     }
     setIsLoading(false);
+  }
+
+  async function handleRename(oldPhase: string) {
+    if (!newPhaseName || newPhaseName.trim() === "" || newPhaseName === oldPhase) {
+      setEditingPhase(null);
+      return;
+    }
+    
+    startTransition(async () => {
+      await renamePhase(oldPhase, newPhaseName.trim());
+      setEditingPhase(null);
+      if (activePhase === oldPhase) {
+        setActivePhase(newPhaseName.trim());
+      }
+      await loadData();
+    });
   }
 
   if (isLoading) {
@@ -83,26 +103,57 @@ export default function ChecklistDashboard() {
           <h2 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-4">Progress Persiapan</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {progress.map((p) => (
-              <button
+              <div
                 key={p.phase}
-                onClick={() => setActivePhase(p.phase)}
-                className={`text-left p-3 rounded-xl border transition-all ${
+                onClick={() => {
+                  if (editingPhase !== p.phase) setActivePhase(p.phase);
+                }}
+                className={`relative text-left p-3 rounded-xl border transition-all cursor-pointer ${
                   activePhase === p.phase
                     ? "border-[#C8975A] bg-[#C8975A]/5 shadow-sm"
                     : "border-transparent bg-gray-50 hover:bg-gray-100"
-                }`}
+                } ${isPending ? "opacity-50 pointer-events-none" : ""}`}
               >
-                <p className={`text-sm font-bold ${activePhase === p.phase ? "text-[#C8975A]" : "text-gray-600"}`}>
-                  {p.phase}
-                </p>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2 mb-1">
+                {editingPhase === p.phase ? (
+                  <div className="flex items-center gap-1 mb-1">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={newPhaseName}
+                      onChange={(e) => setNewPhaseName(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleRename(p.phase)}
+                      className="w-full px-2 py-0.5 text-sm font-bold text-[#1A1A1A] bg-white border border-[#C8975A] rounded focus:outline-none"
+                    />
+                    <button onClick={(e) => { e.stopPropagation(); handleRename(p.phase); }} className="text-green-600 hover:text-green-700"><Check className="w-4 h-4" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); setEditingPhase(null); }} className="text-red-500 hover:text-red-600"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between mb-1 group">
+                    <p className={`text-sm font-bold ${activePhase === p.phase ? "text-[#C8975A]" : "text-gray-600"}`}>
+                      {p.phase}
+                    </p>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPhase(p.phase);
+                        setNewPhaseName(p.phase);
+                      }}
+                      className={`p-1 rounded text-gray-400 hover:text-[#C8975A] hover:bg-black/5 ${activePhase === p.phase ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                      title="Edit Timeline"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                
+                <div className="w-full bg-gray-200 rounded-full h-1.5 mb-1">
                   <div
                     className="bg-[#C8975A] h-1.5 rounded-full"
                     style={{ width: `${p.percentage}%` }}
                   />
                 </div>
                 <p className="text-xs text-gray-500">{p.completed}/{p.total} Selesai</p>
-              </button>
+              </div>
             ))}
           </div>
         </div>

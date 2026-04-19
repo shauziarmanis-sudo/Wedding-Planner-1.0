@@ -3,6 +3,7 @@
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { GoogleSheetsService } from "@/lib/googleService";
+import { withRateLimit } from "@/lib/rateLimiter";
 import { SHEETS_CONFIG } from "@/config/sheets";
 import { MASTER_CHECKLIST } from "@/lib/checklistSeed";
 import { ChecklistTask, ChecklistProgress, UserProfile, TaskPhase, TaskStatus } from "@/types/checklist.types";
@@ -200,12 +201,15 @@ export async function getChecklistProgress(): Promise<ChecklistProgress[]> {
 
   try {
     const tasks = await getChecklist();
-    const phases: TaskPhase[] = [
-      "H-6 Bulan", "H-5 Bulan", "H-4 Bulan",
-      "H-3 Bulan", "H-2 Bulan", "H-1 Bulan",
-    ];
+    // Dynamically get unique phases
+    const uniquePhases = Array.from(new Set(tasks.map((t) => t.phase_label)));
+    
+    // Sort them based on common "H-X" patterns if possible, or just keep their appearance order
+    // Since "H-6" should come before "H-1", a simple reverse alphabetical might work for standard,
+    // but preserving order of appearance from master data is usually safest if we haven't renamed.
+    // For simplicity, we'll just use the unique phases directly.
 
-    return phases.map((phase) => {
+    return uniquePhases.map((phase) => {
       const phaseTasks = tasks.filter((t) => t.phase_label === phase);
       const completed = phaseTasks.filter((t) => t.status === "SELESAI" || t.status === "SKIP").length;
       const total = phaseTasks.length;
@@ -220,6 +224,51 @@ export async function getChecklistProgress(): Promise<ChecklistProgress[]> {
   } catch (error) {
     console.error("Error fetching progress:", error);
     return [];
+  }
+}
+
+// ── 4b. Rename Phase ──
+export async function renamePhase(oldPhase: string, newPhase: string): Promise<{ success: boolean; error?: string }> {
+  const session = await getSessionData();
+  if (!session?.accessToken || !session?.spreadsheetId) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  if (!newPhase || newPhase.trim() === "") {
+    return { success: false, error: "Nama fase tidak boleh kosong" };
+  }
+
+  try {
+    const service = new GoogleSheetsService(session.accessToken);
+    const rows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
+    if (!rows) return { success: true };
+
+    const updates = [];
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i][1] === oldPhase) {
+        updates.push({
+          range: `Checklist!B${i + 2}`,
+          values: [[newPhase]],
+        });
+      }
+    }
+
+    if (updates.length > 0) {
+      await withRateLimit(async () => {
+        await service['sheets'].spreadsheets.values.batchUpdate({
+          spreadsheetId: session.spreadsheetId,
+          requestBody: {
+            valueInputOption: 'USER_ENTERED',
+            data: updates,
+          },
+        });
+      });
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: msg };
   }
 }
 

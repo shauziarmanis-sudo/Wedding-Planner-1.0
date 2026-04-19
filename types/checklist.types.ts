@@ -1,7 +1,7 @@
 export type AdatType = 'JAWA' | 'SUNDA' | 'ISLAMI' | 'MODERN' | 'CAMPURAN';
 export type TaskStatus = 'BELUM' | 'PROSES' | 'SELESAI' | 'SKIP';
 export type TaskAssignee = 'PENGANTIN_PRIA' | 'PENGANTIN_WANITA' | 'BERDUA' | 'KELUARGA';
-export type TaskPhase = 'H-6 Bulan' | 'H-5 Bulan' | 'H-4 Bulan' | 'H-3 Bulan' | 'H-2 Bulan' | 'H-1 Bulan';
+export type TaskPhase = string;
 
 export type TaskCategory =
   | 'VENUE' | 'KATERING' | 'DOKUMENTASI' | 'BUSANA_RIAS' | 'UNDANGAN'
