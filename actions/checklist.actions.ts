@@ -585,9 +585,20 @@ export async function executeAdatSwitch(
         }
       }
       
+      // If adat_type didn't exist before, append it.
+      if (!metaRows.some(r => r[0] === 'adat_type')) {
+          await service.appendRow(session.spreadsheetId, "Metadata!A:B", ["adat_type", new_adat]);
+      }
+
       // If adat_secondary didn't exist before and we have it now, append it.
       if (new_adat_secondary && !metaRows.some(r => r[0] === 'adat_secondary')) {
           await service.appendRow(session.spreadsheetId, "Metadata!A:B", ["adat_secondary", new_adat_secondary]);
+      } else if (!new_adat_secondary && metaRows.some(r => r[0] === 'adat_secondary')) {
+          // If we are removing secondary adat, we should clear it.
+          const secIndex = metaRows.findIndex(r => r[0] === 'adat_secondary');
+          if (secIndex >= 0) {
+            metadataUpdates.push({ range: `Metadata!B${secIndex+1}`, values: [[""]] });
+          }
       }
       
       if (metadataUpdates.length > 0) {
