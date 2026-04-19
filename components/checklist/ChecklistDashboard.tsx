@@ -103,10 +103,10 @@ export default function ChecklistDashboard() {
   return (
     <div className="space-y-8">
       {/* ── Adat Header ── */}
-      {metadata?.adat_type && (
+      {(metadata?.adat_type || tasks.length > 0) && (
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
           <div className="flex-1 max-w-2xl">
-            <AdatInfoCard adat={metadata.adat_type} secondaryAdat={metadata.adat_secondary} />
+            <AdatInfoCard adat={metadata?.adat_type || "MODERN"} secondaryAdat={metadata?.adat_secondary} />
           </div>
           <Button variant="outline" onClick={() => setIsSwitcherOpen(true)} className="shrink-0 gap-2">
             <Settings2 className="w-4 h-4" />
@@ -116,8 +116,8 @@ export default function ChecklistDashboard() {
           <AdatSwitcherModal 
             isOpen={isSwitcherOpen} 
             onClose={() => setIsSwitcherOpen(false)} 
-            currentAdat={metadata.adat_type}
-            currentSecondary={metadata.adat_secondary}
+            currentAdat={metadata?.adat_type || "MODERN"}
+            currentSecondary={metadata?.adat_secondary}
             onSuccess={loadData}
           />
         </div>
