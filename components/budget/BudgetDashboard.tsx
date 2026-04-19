@@ -10,6 +10,7 @@ import AddVendorForm from "./AddVendorForm";
 import PaymentModal from "./PaymentModal";
 import BudgetBreakdownChart from "./BudgetBreakdownChart";
 import VendorComparisonModal from "./VendorComparisonModal";
+import EditVendorModal from "./EditVendorModal";
 
 export default function BudgetDashboard() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
