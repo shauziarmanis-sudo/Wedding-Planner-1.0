@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getGuestPublic, updateRSVP } from '@/actions/guest.actions';
-import { getMetadata } from '@/actions/metadata';
+import { getMetadataPublic } from '@/actions/metadata';
 import InvitationClient from '@/components/guests/InvitationClient';
 
 interface Props {
