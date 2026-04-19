@@ -2,7 +2,6 @@ export const SHEETS_CONFIG = {
   dbName: 'Life-Start-DB',
   tabs: {
     metadata: 'Metadata',
-    guests: 'Guests',
     budget: 'Budget',
     gifts: 'Gifts',
     transactions: 'Transactions',
@@ -13,7 +12,6 @@ export const SHEETS_CONFIG = {
   },
   ranges: {
     metadata: 'Metadata!A2:J',
-    guests: 'Guests!A2:G',
     budget: 'Budget!A2:R',
     gifts: 'Gifts!A2:E',
     transactions: 'Transactions!A2:F',

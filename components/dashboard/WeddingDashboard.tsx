@@ -3,9 +3,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, UserCheck, CheckCircle2, Circle, TrendingUp, Calendar, Store } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getGuests } from "@/actions/guest";
+import { getGuests } from "@/actions/guest.actions";
 import { getVendors } from "@/actions/vendor.actions";
-import { GuestRecord } from "@/types/wedding";
+import { Guest } from "@/types/guest.types";
 import { Vendor } from "@/types/vendor.types";
 
 const container = {
@@ -32,7 +32,7 @@ function AnimatedNumber({ value }: { value: number }) {
 }
 
 export default function WeddingDashboard() {
-  const [guests, setGuests] = useState<GuestRecord[]>([]);
+  const [guests, setGuests] = useState<Guest[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function WeddingDashboard() {
   const totalBudget = vendors.reduce((s, v) => s + (v.actual_cost > 0 ? v.actual_cost : v.estimated_cost), 0);
   const totalPaid = vendors.reduce((s, v) => s + v.paid_amount, 0);
   const budgetPercent = totalBudget > 0 ? Math.round((totalPaid / totalBudget) * 100) : 0;
-  const confirmedGuests = guests.filter((g) => g.status === "CONFIRMED").length;
+  const confirmedGuests = guests.filter((g) => g.rsvp_status === "HADIR").length;
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
