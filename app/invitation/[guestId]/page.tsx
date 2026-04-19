@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getGuestPublic, updateRSVP } from '@/actions/guest.actions';
+import { getGuestPublic } from '@/actions/guest.actions';
 import { getMetadataPublic } from '@/actions/metadata';
 import InvitationClient from '@/components/guests/InvitationClient';
 

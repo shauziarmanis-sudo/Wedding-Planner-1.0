@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, MessageCircle, Copy, Trash2, Edit2, Wallet, Users, CheckCircle2, XCircle, Clock, ExternalLink, Filter, Loader2 } from "lucide-react";
-import { Guest, GuestStats, GuestCategory, RSVPStatus, GiftType } from "@/types/guest.types";
+import { Plus, Search, MessageCircle, Copy, Trash2, Wallet, Users, CheckCircle2, Clock, Filter, Loader2 } from "lucide-react";
+import { Guest, GuestStats, GuestCategory } from "@/types/guest.types";
 import { getGuests, getGuestStats, deleteGuest, ensureGuestSheet } from "@/actions/guest.actions";
 import { getMetadata } from "@/actions/metadata";
 import { Button } from "@/components/ui/button";

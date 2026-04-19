@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, MessageCircle, Copy, Trash2, Edit2, Wallet, Users, CheckCircle2, XCircle, Clock, ExternalLink, Filter } from "lucide-react";
-import { Guest, GuestStats, GuestCategory, RSVPStatus, GiftType } from "@/types/guest.types";
-import { deleteGuest, markInvitationSent } from "@/actions/guest.actions";
+import { Plus, Search, MessageCircle, Copy, Trash2, Edit2, Wallet, Users, CheckCircle2, Clock, Filter } from "lucide-react";
+import { Guest, GuestStats, GuestCategory } from "@/types/guest.types";
+import { deleteGuest } from "@/actions/guest.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import GiftRecordModal from "./GiftRecordModal";

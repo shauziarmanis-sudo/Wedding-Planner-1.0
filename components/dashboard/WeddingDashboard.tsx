@@ -1,7 +1,7 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
-import { Users, UserCheck, CheckCircle2, Circle, TrendingUp, Calendar, Store } from "lucide-react";
+import { motion } from "framer-motion";
+import { Users, UserCheck, TrendingUp, Store } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getGuests } from "@/actions/guest.actions";
 import { getVendors } from "@/actions/vendor.actions";
