@@ -41,7 +41,7 @@ export async function analyzeVendors(vendors: Vendor[], userApiKey?: string): Pr
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || \`Gagal menghubungi AI Server (Status: \${response.status})\`);
+      throw new Error(errorData.error?.message || `Gagal menghubungi AI Server (Status: ${response.status})`);
     }
 
     const result = await response.json();
@@ -105,7 +105,7 @@ Format dalam Markdown yang rapi. Gunakan emoji untuk mempercantik. Maksimal 5-6 
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || \`Gagal menghubungi AI Server (Status: \${response.status})\`);
+      throw new Error(errorData.error?.message || `Gagal menghubungi AI Server (Status: ${response.status})`);
     }
 
     const result = await response.json();
