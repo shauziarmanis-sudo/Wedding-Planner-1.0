@@ -189,4 +189,67 @@ export class GoogleSheetsService {
     }
     return null;
   }
+
+  /**
+   * Physically delete a row from a sheet using sheetId (numeric).
+   * sheetId berbeda dari spreadsheetId — sheetId adalah ID tab individual.
+   * Untuk mendapatkan sheetId, gunakan getSheetId() helper.
+   * rowIndex adalah 0-based index (baris header = 0, data mulai dari 1).
+   */
+  async deleteRow(spreadsheetId: string, sheetId: number, rowIndex: number): Promise<void> {
+    await withRateLimit(async () => {
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          requests: [{
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: 'ROWS',
+                startIndex: rowIndex,
+                endIndex: rowIndex + 1,
+              }
+            }
+          }]
+        }
+      });
+    });
+  }
+
+  /**
+   * Get the numeric sheetId for a tab by its title.
+   */
+  async getSheetId(spreadsheetId: string, sheetTitle: string): Promise<number> {
+    return withRateLimit(async () => {
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId,
+        fields: 'sheets(properties(sheetId,title))',
+      });
+      const sheet = response.data.sheets?.find(
+        s => s.properties?.title === sheetTitle
+      );
+      if (!sheet?.properties?.sheetId && sheet?.properties?.sheetId !== 0) {
+        throw new Error(`Sheet "${sheetTitle}" not found`);
+      }
+      return sheet.properties.sheetId;
+    });
+  }
+
+  /**
+   * Batch update multiple ranges and values in a single API call
+   */
+  async batchUpdateValues(
+    spreadsheetId: string, 
+    data: { range: string; values: (string | number)[][] }[]
+  ): Promise<void> {
+    await withRateLimit(async () => {
+      await this.sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          valueInputOption: 'USER_ENTERED',
+          data: data,
+        },
+      });
+    });
+  }
 }

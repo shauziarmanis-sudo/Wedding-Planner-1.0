@@ -23,6 +23,9 @@ export default function DocumentDashboard({ initialReligion }: DocumentDashboard
   const [localStatuses, setLocalStatuses] = useState<Record<string, DocStatus>>({});
   const [showCustomModal, setShowCustomModal] = useState(false);
 
+  type PartyFilter = 'SEMUA' | 'PRIA' | 'WANITA' | 'BERSAMA' | 'CUSTOM';
+  const [activeParty, setActiveParty] = useState<PartyFilter>('SEMUA');
+
   useEffect(() => {
     if (religion) {
       fetchDocs();
@@ -108,8 +111,13 @@ export default function DocumentDashboard({ initialReligion }: DocumentDashboard
     return <ReligionSelector onSelect={handleReligionSelect} />;
   }
 
-  // Group by category
-  const categories = Array.from(new Set(docs.map(d => d.category)));
+  // Filter docs berdasarkan activeParty sebelum grouping ke categories:
+  const filteredDocs = activeParty === 'SEMUA' 
+    ? docs 
+    : docs.filter(d => d.party === activeParty);
+
+  // Group by category based on filtered docs
+  const categories = Array.from(new Set(filteredDocs.map(d => d.category)));
   const completedCount = docs.filter(d => (localStatuses[d.doc_id] || d.status) === 'DONE').length;
   const progressPercent = Math.round((completedCount / docs.length) * 100) || 0;
 
@@ -142,12 +150,32 @@ export default function DocumentDashboard({ initialReligion }: DocumentDashboard
             className="h-full bg-[#C8975A] rounded-full"
           />
         </div>
+
+        {/* Party Filter Tabs */}
+        <div className="flex gap-2 flex-wrap mt-6">
+          {(['SEMUA', 'PRIA', 'WANITA', 'BERSAMA', 'CUSTOM'] as PartyFilter[]).map(p => (
+            <button
+              key={p}
+              onClick={() => setActiveParty(p)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                activeParty === p 
+                  ? 'bg-[#C8975A] text-white border-[#C8975A]' 
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#C8975A]'
+              }`}
+            >
+              {p === 'PRIA' ? 'Calon Pria' : p === 'WANITA' ? 'Calon Wanita' : p === 'BERSAMA' ? 'Bersama' : p}
+              <span className="ml-1 text-xs opacity-60">
+                ({p === 'SEMUA' ? docs.length : docs.filter(d => d.party === p).length})
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Document Lists by Category */}
       <div className="space-y-8">
         {categories.map(category => {
-          const categoryDocs = docs.filter(d => d.category === category);
+          const categoryDocs = filteredDocs.filter(d => d.category === category);
           return (
             <div key={category} className="space-y-3">
               <h3 className="font-semibold text-gray-900 border-b pb-2 flex justify-between items-end">

@@ -38,16 +38,24 @@ export async function POST(req: Request) {
     // 3. Calculate Net Balance
     const initialBalance = totalGifts - totalUnpaid;
 
-    // 4. Update Metadata Status to MARRIED
-    // Note: In a real app, you'd find the exact row, but here we assume row 2 for the single user metadata
-    const now = new Date().toISOString();
-    await service.updateRow(spreadsheetId, 'Metadata!D2:F2', [
-      'MARRIED',
-      now, // Just updating a dummy field or keep original created at
-      now  // Updated at
-    ]);
+    // 4. Update Metadata Status to MARRIED (cari row yang benar)
+    const metaRows = await service.readRows(spreadsheetId, 'Metadata!A2:B');
+    if (metaRows) {
+      for (let i = 0; i < metaRows.length; i++) {
+        if (metaRows[i][0] === 'status') {
+          await service.updateRow(spreadsheetId, `Metadata!B${i + 2}`, ['MARRIED']);
+          break;
+        }
+      }
+      // Jika key 'status' belum ada, append
+      const hasStatus = metaRows.some(r => r[0] === 'status');
+      if (!hasStatus) {
+        await service.appendRow(spreadsheetId, 'Metadata!A:B', ['status', 'MARRIED']);
+      }
+    }
 
     // 5. Create Initial Transaction in Finance Sheet
+    const now = new Date().toISOString();
     const txId = `tx-${Date.now()}`;
     await service.appendRow(spreadsheetId, SHEETS_CONFIG.ranges.transactions, [
       txId,

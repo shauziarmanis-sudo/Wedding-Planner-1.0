@@ -18,6 +18,15 @@ export const initialSheetSchema: SheetSchema = {
               { userEnteredValue: { stringValue: 'Status' } },
               { userEnteredValue: { stringValue: 'CreatedAt' } },
               { userEnteredValue: { stringValue: 'UpdatedAt' } },
+              { userEnteredValue: { stringValue: 'groom_name' } },
+              { userEnteredValue: { stringValue: 'bride_name' } },
+              { userEnteredValue: { stringValue: 'akad_date' } },
+              { userEnteredValue: { stringValue: 'akad_time' } },
+              { userEnteredValue: { stringValue: 'akad_venue' } },
+              { userEnteredValue: { stringValue: 'resepsi_date' } },
+              { userEnteredValue: { stringValue: 'resepsi_time' } },
+              { userEnteredValue: { stringValue: 'resepsi_venue' } },
+              { userEnteredValue: { stringValue: 'wedding_quote' } },
             ]
           }
         ]

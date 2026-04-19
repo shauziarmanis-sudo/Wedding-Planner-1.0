@@ -141,7 +141,12 @@ export async function deleteGuest(guest_id: string): Promise<void> {
   const rowIndex = rows.findIndex(r => r[0] === guest_id);
   if (rowIndex === -1) return;
 
-  await service.clearRow(spreadsheetId, `guests!A${rowIndex + 2}:Q${rowIndex + 2}`);
+  // Get numeric sheetId for the guests tab
+  const sheetId = await service.getSheetId(spreadsheetId, SHEETS_CONFIG.tabs.guests);
+  
+  // +1 because rowIndex is 0-based from data rows (after header), 
+  // so actual sheet row is rowIndex + 1 (header is row 0 in 0-based)
+  await service.deleteRow(spreadsheetId, sheetId, rowIndex + 1);
   revalidatePath("/dashboard/guests");
 }
 

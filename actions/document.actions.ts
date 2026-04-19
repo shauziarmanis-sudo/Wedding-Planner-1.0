@@ -150,15 +150,7 @@ export async function batchUpdateDocumentStatus(updates: { id: string; status: D
     }
 
     if (batchUpdates.length > 0) {
-      await withRateLimit(async () => {
-        await service['sheets'].spreadsheets.values.batchUpdate({
-          spreadsheetId,
-          requestBody: {
-            valueInputOption: 'USER_ENTERED',
-            data: batchUpdates,
-          },
-        });
-      });
+      await service.batchUpdateValues(spreadsheetId, batchUpdates);
     }
 
     return { success: true };
@@ -205,7 +197,8 @@ export async function deleteDocument(doc_id: string): Promise<{ success: boolean
     if (rowIndex === -1) throw new Error("Document not found.");
 
     // It is a custom document if party is CUSTOM, but let's allow deleting any for flexibility.
-    await service.clearRow(spreadsheetId, `${SHEETS_CONFIG.tabs.documents}!A${rowIndex + 2}:J${rowIndex + 2}`);
+    const sheetId = await service.getSheetId(spreadsheetId, SHEETS_CONFIG.tabs.documents);
+    await service.deleteRow(spreadsheetId, sheetId, rowIndex + 1);
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };

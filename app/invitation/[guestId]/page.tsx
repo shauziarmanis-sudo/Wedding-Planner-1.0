@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getGuestPublic } from '@/actions/guest.actions';
 import { getMetadataPublic } from '@/actions/metadata';
-import InvitationClient from '@/components/guests/InvitationClient';
+import InvitationTemplate from '@/components/invitation/InvitationTemplate';
 
 interface Props {
   params: { guestId: string };
@@ -39,11 +39,22 @@ export default async function InvitationPage({ params, searchParams }: Props) {
   const spreadsheetId = Buffer.from(token, 'base64').toString();
   const metadata = await getMetadataPublic(spreadsheetId);
   
+  const weddingProps = {
+    groomName: metadata.groom_name || "Groom",
+    brideName: metadata.bride_name || "Bride",
+    akadDate: metadata.akad_date || "",
+    akadTime: metadata.akad_time || "",
+    akadVenue: metadata.akad_venue || "",
+    resepsiDate: metadata.resepsi_date || "",
+    resepsiTime: metadata.resepsi_time || "",
+    resepsiVenue: metadata.resepsi_venue || "",
+    quote: metadata.wedding_quote || "",
+  };
+
   return (
-    <InvitationClient 
-      guest={guest} 
-      token={token}
-      metadata={metadata}
+    <InvitationTemplate 
+      guest={{ name: guest.name, pax: guest.pax_estimate || 1 }} 
+      wedding={weddingProps}
     />
   );
 }

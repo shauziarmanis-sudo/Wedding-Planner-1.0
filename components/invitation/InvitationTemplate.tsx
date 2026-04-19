@@ -4,6 +4,18 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { Heart, MapPin, Calendar, Clock } from "lucide-react";
 
+export interface WeddingInfo {
+  groomName: string;
+  brideName: string;
+  akadDate: string;
+  akadTime: string;
+  akadVenue: string;
+  resepsiDate: string;
+  resepsiTime: string;
+  resepsiVenue: string;
+  quote?: string;
+}
+
 interface GuestInfo {
   name: string;
   pax: number;
@@ -14,7 +26,13 @@ const fadeUp = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: "easeOut" } },
 };
 
-export default function InvitationTemplate({ guest }: { guest: GuestInfo }) {
+export default function InvitationTemplate({ 
+  guest, 
+  wedding 
+}: { 
+  guest: GuestInfo; 
+  wedding: WeddingInfo;
+}) {
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
@@ -33,9 +51,13 @@ export default function InvitationTemplate({ guest }: { guest: GuestInfo }) {
             <Heart className="w-8 h-8 text-[#E91E63] mx-auto mb-4 fill-[#E91E63]" />
           </motion.div>
           <h3 className="text-sm tracking-[0.3em] uppercase mb-4 text-[#C2185B] font-medium">The Wedding Of</h3>
-          <h1 className="text-5xl md:text-7xl font-serif text-[#C2185B] mb-4 leading-tight">Romeo & Juliet</h1>
+          <h1 className="text-5xl md:text-7xl font-serif text-[#C2185B] mb-4 leading-tight">
+            {wedding.groomName} <br className="md:hidden" /> &amp; <br className="md:hidden" /> {wedding.brideName}
+          </h1>
           <div className="w-24 h-[1px] bg-[#C2185B]/30 mx-auto my-6" />
-          <p className="text-lg md:text-xl font-light italic text-[#212121]/60">&ldquo;We decided on forever&rdquo;</p>
+          <p className="text-lg md:text-xl font-light italic text-[#212121]/60">
+            &ldquo;{wedding.quote || "We decided on forever"}&rdquo;
+          </p>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6, duration: 0.8 }}
@@ -55,18 +77,18 @@ export default function InvitationTemplate({ guest }: { guest: GuestInfo }) {
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeUp} className="text-center">
             <h2 className="font-serif text-3xl md:text-4xl text-[#C2185B] mb-4">Akad Nikah</h2>
             <div className="flex flex-col items-center gap-3 text-[#212121]/70">
-              <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-[#E91E63]" /><span>Sabtu, 15 November 2025</span></div>
-              <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#E91E63]" /><span>08:00 - 10:00 WIB</span></div>
-              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-[#E91E63]" /><span>Masjid Al-Falah, Jakarta Selatan</span></div>
+              <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-[#E91E63]" /><span>{wedding.akadDate || "Belum ditentukan"}</span></div>
+              <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#E91E63]" /><span>{wedding.akadTime || "Belum ditentukan"}</span></div>
+              <div className="flex items-center gap-2 text-center max-w-sm"><MapPin className="w-4 h-4 text-[#E91E63] shrink-0" /><span>{wedding.akadVenue || "Belum ditentukan"}</span></div>
             </div>
           </motion.div>
 
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeUp} className="text-center">
             <h2 className="font-serif text-3xl md:text-4xl text-[#C2185B] mb-4">Resepsi</h2>
             <div className="flex flex-col items-center gap-3 text-[#212121]/70">
-              <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-[#E91E63]" /><span>Sabtu, 15 November 2025</span></div>
-              <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#E91E63]" /><span>11:00 - 14:00 WIB</span></div>
-              <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-[#E91E63]" /><span>Grand Ballroom, Hotel Mulia</span></div>
+              <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-[#E91E63]" /><span>{wedding.resepsiDate || "Belum ditentukan"}</span></div>
+              <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#E91E63]" /><span>{wedding.resepsiTime || "Belum ditentukan"}</span></div>
+              <div className="flex items-center gap-2 text-center max-w-sm"><MapPin className="w-4 h-4 text-[#E91E63] shrink-0" /><span>{wedding.resepsiVenue || "Belum ditentukan"}</span></div>
             </div>
           </motion.div>
 
