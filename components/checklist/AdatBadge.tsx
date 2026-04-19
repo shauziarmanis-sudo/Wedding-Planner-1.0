@@ -14,7 +14,8 @@ interface AdatBadgeProps {
 }
 
 export function AdatBadge({ adatTags, isCustom, addedBySwitch, compact = false }: AdatBadgeProps) {
-  if (adatTags.includes('ALL' as any)) {
+  const tags = adatTags as string[];
+  if (tags.includes('ALL')) {
     if (isCustom) {
       return (
         <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200 gap-1 whitespace-nowrap">
