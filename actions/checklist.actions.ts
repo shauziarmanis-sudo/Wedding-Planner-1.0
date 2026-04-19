@@ -243,7 +243,7 @@ export async function renamePhase(oldPhase: string, newPhase: string): Promise<{
     const rows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
     if (!rows) return { success: true };
 
-    const updates = [];
+    const updates: { range: string; values: string[][] }[] = [];
     for (let i = 0; i < rows.length; i++) {
       if (rows[i][1] === oldPhase) {
         updates.push({
