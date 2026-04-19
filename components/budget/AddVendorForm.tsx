@@ -46,8 +46,11 @@ export default function AddVendorForm({ onClose, onSuccess }: Props) {
     setFormData(prev => ({ ...prev, [name]: val }));
   };
 
+  const [errorMsg, setErrorMsg] = useState("");
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg("");
     startTransition(async () => {
       const payload = {
         ...formData,
@@ -55,9 +58,13 @@ export default function AddVendorForm({ onClose, onSuccess }: Props) {
         actual_cost: parseInt(formData.actual_cost) || 0,
         dp_amount: parseInt(formData.dp_amount) || 0,
       };
-      await addVendor(payload);
-      onSuccess();
-      onClose();
+      const res = await addVendor(payload);
+      if (res && !res.success) {
+        setErrorMsg(res.error || "Gagal menyimpan data vendor.");
+      } else {
+        onSuccess();
+        onClose();
+      }
     });
   };
 
@@ -76,6 +83,12 @@ export default function AddVendorForm({ onClose, onSuccess }: Props) {
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
+
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+            {errorMsg}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

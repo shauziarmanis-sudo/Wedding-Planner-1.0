@@ -9,6 +9,7 @@ import VendorCard, { formatRupiah } from "./VendorCard";
 import AddVendorForm from "./AddVendorForm";
 import PaymentModal from "./PaymentModal";
 import BudgetBreakdownChart from "./BudgetBreakdownChart";
+import VendorComparisonModal from "./VendorComparisonModal";
 
 export default function BudgetDashboard() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -17,6 +18,7 @@ export default function BudgetDashboard() {
 
   // Modals
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showComparison, setShowComparison] = useState(false);
   const [paymentVendor, setPaymentVendor] = useState<Vendor | null>(null);
   const [editVendor, setEditVendor] = useState<Vendor | null>(null); // For future edit functionality
 
@@ -58,11 +60,18 @@ export default function BudgetDashboard() {
 
   return (
     <div className="space-y-8 relative pb-20">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-serif font-bold text-[#1A1A1A]">Vendor & Budget</h2>
           <p className="text-sm text-gray-500 mt-1">Lacak pengeluaran dan kelola vendor pernikahan Anda</p>
         </div>
+        
+        <button 
+          onClick={() => setShowComparison(true)}
+          className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm border border-indigo-100 hover:bg-indigo-100 transition-colors"
+        >
+          ⚖️ Bandingkan Vendor
+        </button>
       </div>
 
       {/* ── Summary Metrics ── */}
@@ -220,6 +229,7 @@ export default function BudgetDashboard() {
       <AnimatePresence>
         {showAddForm && <AddVendorForm onClose={() => setShowAddForm(false)} onSuccess={loadData} />}
         {paymentVendor && <PaymentModal vendor={paymentVendor} onClose={() => setPaymentVendor(null)} onSuccess={loadData} />}
+        {showComparison && <VendorComparisonModal vendors={vendors} onClose={() => setShowComparison(false)} />}
       </AnimatePresence>
     </div>
   );

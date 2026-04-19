@@ -135,7 +135,10 @@ export async function addVendor(data: VendorFormInput): Promise<{ success: boole
   if (!session?.accessToken || !session?.spreadsheetId) return { success: false, error: "Unauthorized" };
 
   const parsed = VendorFormSchema.safeParse(data);
-  if (!parsed.success) return { success: false, error: "Data tidak valid" };
+  if (!parsed.success) {
+    console.error("Vendor validation error:", parsed.error.format());
+    return { success: false, error: "Data tidak valid: " + parsed.error.issues[0].message };
+  }
 
   try {
     const service = new GoogleSheetsService(session.accessToken);
