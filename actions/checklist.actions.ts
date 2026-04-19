@@ -458,7 +458,7 @@ export async function previewAdatSwitch(
         continue;
       }
 
-      const tags = task.adat_tags as (string | AdatType)[];
+      const tags = task.adat_tags as readonly string[];
       const matchesNewAdat = tags.includes('ALL') || 
                              tags.includes(new_adat as any) || 
                              (new_adat_secondary && tags.includes(new_adat_secondary as any));

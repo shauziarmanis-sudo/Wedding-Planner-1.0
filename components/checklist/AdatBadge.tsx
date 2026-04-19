@@ -14,7 +14,7 @@ interface AdatBadgeProps {
 }
 
 export function AdatBadge({ adatTags, isCustom, addedBySwitch, compact = false }: AdatBadgeProps) {
-  const tags = adatTags as string[];
+  const tags = adatTags as readonly string[];
   if (tags.includes('ALL')) {
     if (isCustom) {
       return (

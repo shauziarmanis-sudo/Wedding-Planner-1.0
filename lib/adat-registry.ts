@@ -1,16 +1,16 @@
 export interface AdatInfo {
-  id: string;
-  label: string;
-  region: string;
-  emoji: string;
-  color: string;
-  colorLight: string;
-  agama_default: string | null;
-  deskripsi: string;
-  prosesi_khas: string[];
-  busana_khas: string;
-  vendor_khusus: string[];
-  catatan?: string;
+  readonly id: string;
+  readonly label: string;
+  readonly region: string;
+  readonly emoji: string;
+  readonly color: string;
+  readonly colorLight: string;
+  readonly agama_default: string | null;
+  readonly deskripsi: string;
+  readonly prosesi_khas: readonly string[];
+  readonly busana_khas: string;
+  readonly vendor_khusus: readonly string[];
+  readonly catatan?: string;
 }
 
 export const ADAT_REGISTRY = {
@@ -205,15 +205,16 @@ export function getAdatColor(adat: AdatType): { main: string; light: string } {
 
 import { ChecklistTask } from '@/types/checklist.types'
 
-export function filterTasksByAdat(
-  tasks: ChecklistTask[],
+export function filterTasksByAdat<T extends { adat_tags: any }>(
+  tasks: T[],
   adat: AdatType,
   adat_secondary?: AdatType
-): ChecklistTask[] {
+): T[] {
   return tasks.filter(task => {
-    if (task.adat_tags.includes('ALL' as any)) return true
-    if (task.adat_tags.includes(adat)) return true
-    if (adat_secondary && task.adat_tags.includes(adat_secondary)) return true
-    return false
-  })
+    const tags = task.adat_tags as string[];
+    if (tags.includes('ALL')) return true;
+    if (tags.includes(adat)) return true;
+    if (adat_secondary && tags.includes(adat_secondary)) return true;
+    return false;
+  });
 }
