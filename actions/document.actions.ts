@@ -1,7 +1,8 @@
 'use server';
 
 import { nanoid } from "nanoid";
-import { getSessionData } from "@/lib/auth";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 import { GoogleSheetsService } from "@/lib/googleService";
 import { SHEETS_CONFIG } from "@/config/sheets";
 import { ChecklistDocument, Religion, DocParty, DocStatus } from "@/types/document.types";
@@ -14,7 +15,7 @@ const DOC_HEADERS = [
 ];
 
 async function getService() {
-  const session = await getSessionData();
+  const session = await getServerSession(authOptions);
   if (!session?.accessToken || !session?.spreadsheetId) {
     throw new Error("Unauthorized");
   }
