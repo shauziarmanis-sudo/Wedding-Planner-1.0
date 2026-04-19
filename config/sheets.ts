@@ -9,6 +9,7 @@ export const SHEETS_CONFIG = {
     savings: 'SavingsGoals',
     checklist: 'Checklist',
     documents: 'Documents',
+    guests: 'guests',
   },
   ranges: {
     metadata: 'Metadata!A2:J',
@@ -19,5 +20,6 @@ export const SHEETS_CONFIG = {
     savings: 'SavingsGoals!A2:E',
     checklist: 'Checklist!A2:N',
     documents: 'Documents!A2:J',
+    guests: 'guests!A2:Q',
   }
 };

@@ -55,3 +55,53 @@ export async function getMetadata(): Promise<any> {
 
   return {};
 }
+
+export async function getMetadataPublic(spreadsheetId: string): Promise<any> {
+  try {
+    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY?.replace(/\\n/g, '\n');
+    
+    if (!serviceAccountEmail || !serviceAccountKey) return {};
+
+    const { google } = require('googleapis');
+    const auth = new google.auth.JWT(
+      serviceAccountEmail,
+      null,
+      serviceAccountKey,
+      ['https://www.googleapis.com/auth/spreadsheets']
+    );
+    const sheets = google.sheets({ version: 'v4', auth });
+    
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: SHEETS_CONFIG.ranges.metadata,
+    });
+    
+    const rows = response.data.values;
+    if (rows && rows.length > 0) {
+      const firstRow = rows[0];
+      const result: any = {
+        bride_name: firstRow[2]?.split(' & ')[0] || "Bride",
+        groom_name: firstRow[2]?.split(' & ')[1] || "Groom",
+        wedding_date: firstRow[6],
+        venue_name: "Venue Name", // Should be in metadata sheet
+        venue_address: "Venue Address",
+      };
+      
+      for (const row of rows) {
+        if (row[0] === 'bride_name') result.bride_name = row[1];
+        if (row[0] === 'groom_name') result.groom_name = row[1];
+        if (row[0] === 'wedding_date') result.wedding_date = row[1];
+        if (row[0] === 'venue_name') result.venue_name = row[1];
+        if (row[0] === 'venue_address') result.venue_address = row[1];
+        if (row[0] === 'akad_time') result.akad_time = row[1];
+        if (row[0] === 'resepsi_time') result.resepsi_time = row[1];
+      }
+      return result;
+    }
+  } catch (error) {
+    console.error("Error fetching public metadata:", error);
+  }
+  return {};
+}
+

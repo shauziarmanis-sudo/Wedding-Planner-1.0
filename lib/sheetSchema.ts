@@ -124,6 +124,34 @@ export const initialSheetSchema: SheetSchema = {
           }
         ]
       }]
+    },
+    {
+      properties: { title: SHEETS_CONFIG.tabs.guests },
+      data: [{
+        rowData: [
+          {
+            values: [
+              { userEnteredValue: { stringValue: 'guest_id' } },
+              { userEnteredValue: { stringValue: 'name' } },
+              { userEnteredValue: { stringValue: 'category' } },
+              { userEnteredValue: { stringValue: 'phone_wa' } },
+              { userEnteredValue: { stringValue: 'address' } },
+              { userEnteredValue: { stringValue: 'pax_estimate' } },
+              { userEnteredValue: { stringValue: 'rsvp_status' } },
+              { userEnteredValue: { stringValue: 'actual_pax' } },
+              { userEnteredValue: { stringValue: 'gift_amount' } },
+              { userEnteredValue: { stringValue: 'gift_type' } },
+              { userEnteredValue: { stringValue: 'rsvp_at' } },
+              { userEnteredValue: { stringValue: 'table_number' } },
+              { userEnteredValue: { stringValue: 'seat_notes' } },
+              { userEnteredValue: { stringValue: 'invitation_sent' } },
+              { userEnteredValue: { stringValue: 'invitation_sent_at' } },
+              { userEnteredValue: { stringValue: 'notes' } },
+              { userEnteredValue: { stringValue: 'created_at' } },
+            ]
+          }
+        ]
+      }]
     }
   ]
 };
