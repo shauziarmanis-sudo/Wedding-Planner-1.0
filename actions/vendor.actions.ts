@@ -219,7 +219,68 @@ export async function recordPayment(vendor_id: string, amount: number, notes: st
   }
 }
 
-// ── 5. Delete Vendor (Soft Delete) ──
+// ── 5. Update Vendor ──
+export async function updateVendor(vendor_id: string, data: Partial<VendorFormInput>): Promise<{ success: boolean; error?: string }> {
+  const session = await getSessionData();
+  if (!session?.accessToken || !session?.spreadsheetId) return { success: false, error: "Unauthorized" };
+
+  try {
+    const service = new GoogleSheetsService(session.accessToken);
+    const rowIndex = await service.findRowIndex(session.spreadsheetId, SHEETS_CONFIG.ranges.budget, 0, vendor_id);
+    if (rowIndex === null) return { success: false, error: "Vendor tidak ditemukan" };
+
+    const rows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.budget);
+    const row = rows![rowIndex - 2];
+
+    const updatedCategory = data.category !== undefined ? data.category : row[1];
+    const updatedVendorName = data.vendor_name !== undefined ? data.vendor_name : row[2];
+    const updatedContactName = data.contact_name !== undefined ? data.contact_name : row[3];
+    const updatedPhoneWa = data.phone_wa !== undefined ? data.phone_wa : row[4];
+    const updatedInstagram = data.instagram !== undefined ? data.instagram : row[5];
+    const updatedEstimatedCost = data.estimated_cost !== undefined ? data.estimated_cost : parseFloat(row[6]) || 0;
+    const updatedActualCost = data.actual_cost !== undefined ? data.actual_cost : parseFloat(row[7]) || 0;
+    const updatedDpAmount = data.dp_amount !== undefined ? data.dp_amount : parseFloat(row[8]) || 0;
+    const updatedDpDate = data.dp_date !== undefined ? data.dp_date : row[9];
+    const updatedContractSigned = data.contract_signed !== undefined ? data.contract_signed : row[13];
+    const updatedNotes = data.notes !== undefined ? data.notes : row[16];
+
+    // Status logic
+    let status = row[11];
+    const current_paid = parseFloat(row[10]) || 0;
+    const new_actual = updatedActualCost > 0 ? updatedActualCost : updatedEstimatedCost;
+    
+    if (current_paid >= new_actual && new_actual > 0) status = "LUNAS";
+    else if (current_paid > updatedDpAmount && current_paid < new_actual) status = "PARTIAL";
+    else if (current_paid === updatedDpAmount && current_paid > 0) status = "DP_LUNAS";
+    else if (current_paid === 0) status = "BELUM_BAYAR";
+
+    await service.updateRow(session.spreadsheetId, `Budget!B${rowIndex}:R${rowIndex}`, [
+      updatedCategory,
+      updatedVendorName,
+      updatedContactName,
+      updatedPhoneWa,
+      updatedInstagram,
+      updatedEstimatedCost,
+      updatedActualCost,
+      updatedDpAmount,
+      updatedDpDate,
+      current_paid, // Column K
+      status,       // Column L
+      row[12] || "",// payment_notes M
+      updatedContractSigned, // N
+      row[14] || "",// contract_date O
+      row[15] || "",// vendor_rating P
+      updatedNotes, // Q
+      row[17] || "" // created_at R
+    ]);
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// ── 6. Delete Vendor (Soft Delete) ──
 export async function deleteVendor(vendor_id: string): Promise<{ success: boolean; error?: string }> {
   const session = await getSessionData();
   if (!session?.accessToken || !session?.spreadsheetId) return { success: false, error: "Unauthorized" };

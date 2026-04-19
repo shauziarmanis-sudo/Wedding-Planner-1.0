@@ -101,6 +101,9 @@ export default function VendorCard({ vendor, onPaymentClick, onEditClick }: Prop
         </div>
 
         <div className="flex items-center gap-2">
+          <button onClick={() => onEditClick(vendor)} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-200 transition-colors">
+            <Edit3 className="w-3.5 h-3.5" /> Edit
+          </button>
           {!isLunas && (
             <button onClick={() => onPaymentClick(vendor)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1A1A] text-white text-xs font-bold rounded-lg hover:bg-black/80 transition-colors">
               <Banknote className="w-3.5 h-3.5" /> Bayar

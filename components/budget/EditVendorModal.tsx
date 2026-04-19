@@ -1,0 +1,188 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { motion } from "framer-motion";
+import { X, Edit3, Trash2 } from "lucide-react";
+import { updateVendor, deleteVendor } from "@/actions/vendor.actions";
+import { Vendor, VendorCategory } from "@/types/vendor.types";
+
+const CATEGORIES: VendorCategory[] = [
+  'PAKET_WEDDING', 'VENUE', 'KATERING', 'FOTOGRAFER', 'VIDEOGRAFER', 'MUA_PENGANTIN', 'MUA_KELUARGA',
+  'BUSANA_PENGANTIN', 'BUSANA_KELUARGA', 'DEKORASI', 'FLORIST', 'MC', 'BAND_MUSIK',
+  'DJ', 'WEDDING_ORGANIZER', 'TRANSPORTASI', 'WEDDING_CAKE', 'SOUVENIR',
+  'DOKUMENTASI_PREWEDDING', 'PERCETAKAN_UNDANGAN', 'PENGHULU', 'CATERING_PRASMANAN',
+  'SOUNDSYSTEM', 'LIGHTING', 'PHOTO_BOOTH', 'LAINNYA'
+];
+
+interface Props {
+  vendor: Vendor;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function EditVendorModal({ vendor, onClose, onSuccess }: Props) {
+  const [isPending, startTransition] = useTransition();
+  const [errorMsg, setErrorMsg] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const [formData, setFormData] = useState({
+    category: vendor.category,
+    vendor_name: vendor.vendor_name,
+    contact_name: vendor.contact_name || "",
+    phone_wa: vendor.phone_wa || "",
+    instagram: vendor.instagram || "",
+    estimated_cost: vendor.estimated_cost.toString(),
+    actual_cost: vendor.actual_cost > 0 ? vendor.actual_cost.toString() : "",
+    dp_amount: vendor.dp_amount.toString(),
+    dp_date: vendor.dp_date || "",
+    contract_signed: vendor.contract_signed,
+    notes: vendor.notes || ""
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const val = value.replace(/\D/g, "");
+    setFormData(prev => ({ ...prev, [name]: val }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    startTransition(async () => {
+      const payload = {
+        ...formData,
+        estimated_cost: parseInt(formData.estimated_cost) || 0,
+        actual_cost: parseInt(formData.actual_cost) || 0,
+        dp_amount: parseInt(formData.dp_amount) || 0,
+      };
+      const res = await updateVendor(vendor.vendor_id, payload);
+      if (res && !res.success) {
+        setErrorMsg(res.error || "Gagal memperbarui data vendor.");
+      } else {
+        onSuccess();
+        onClose();
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    setErrorMsg("");
+    startTransition(async () => {
+      const res = await deleteVendor(vendor.vendor_id);
+      if (res && !res.success) {
+        setErrorMsg(res.error || "Gagal menghapus data vendor.");
+      } else {
+        onSuccess();
+        onClose();
+      }
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 my-8"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-serif text-xl font-bold text-[#1A1A1A] flex items-center gap-2">
+            <Edit3 className="w-5 h-5 text-blue-600" /> Edit Vendor
+          </h2>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-black/5">
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+            {errorMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Kategori *</label>
+              <select name="category" value={formData.category} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm">
+                {CATEGORIES.map(c => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Nama Vendor *</label>
+              <input required name="vendor_name" value={formData.vendor_name} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Nama Kontak Person</label>
+              <input name="contact_name" value={formData.contact_name} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">No WhatsApp</label>
+              <input name="phone_wa" value={formData.phone_wa} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Instagram</label>
+              <input name="instagram" value={formData.instagram} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Status Kontrak</label>
+              <select name="contract_signed" value={formData.contract_signed} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm">
+                <option value="PROSES">Sedang Diproses</option>
+                <option value="YA">Sudah Tanda Tangan</option>
+                <option value="TIDAK">Tanpa Kontrak Resmi</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 pt-4 mt-4">
+            <h3 className="text-sm font-bold text-[#1A1A1A] mb-3">Informasi Biaya</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Estimasi Biaya (Rp)</label>
+                <input required name="estimated_cost" value={formData.estimated_cost ? parseInt(formData.estimated_cost).toLocaleString("id-ID") : ""} onChange={handleNumberChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Biaya Aktual (Rp)</label>
+                <input name="actual_cost" value={formData.actual_cost ? parseInt(formData.actual_cost).toLocaleString("id-ID") : ""} onChange={handleNumberChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">DP (Rp)</label>
+                <input name="dp_amount" value={formData.dp_amount ? parseInt(formData.dp_amount).toLocaleString("id-ID") : ""} onChange={handleNumberChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Tanggal Bayar DP</label>
+                <input type="date" name="dp_date" value={formData.dp_date} onChange={handleChange} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm" />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">Catatan</label>
+            <textarea name="notes" value={formData.notes} onChange={handleChange} rows={2} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-600/30 text-sm resize-none" />
+          </div>
+
+          <div className="pt-4 flex gap-3">
+            {!confirmDelete ? (
+              <button type="button" onClick={() => setConfirmDelete(true)} className="px-4 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors flex items-center justify-center">
+                <Trash2 className="w-5 h-5" />
+              </button>
+            ) : (
+              <button type="button" onClick={handleDelete} disabled={isPending} className="px-4 py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg hover:bg-red-700 transition-colors disabled:opacity-50 text-sm whitespace-nowrap">
+                {isPending ? "Menghapus..." : "Yakin Hapus?"}
+              </button>
+            )}
+
+            <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} disabled={isPending || !formData.vendor_name || !formData.estimated_cost} type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50 hover:bg-blue-700 transition-colors">
+              {isPending ? "Menyimpan..." : "Simpan Perubahan"}
+            </motion.button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+}

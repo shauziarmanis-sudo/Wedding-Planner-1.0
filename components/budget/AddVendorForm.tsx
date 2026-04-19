@@ -7,7 +7,7 @@ import { addVendor } from "@/actions/vendor.actions";
 import { VendorCategory } from "@/types/vendor.types";
 
 const CATEGORIES: VendorCategory[] = [
-  'VENUE', 'KATERING', 'FOTOGRAFER', 'VIDEOGRAFER', 'MUA_PENGANTIN', 'MUA_KELUARGA',
+  'PAKET_WEDDING', 'VENUE', 'KATERING', 'FOTOGRAFER', 'VIDEOGRAFER', 'MUA_PENGANTIN', 'MUA_KELUARGA',
   'BUSANA_PENGANTIN', 'BUSANA_KELUARGA', 'DEKORASI', 'FLORIST', 'MC', 'BAND_MUSIK',
   'DJ', 'WEDDING_ORGANIZER', 'TRANSPORTASI', 'WEDDING_CAKE', 'SOUVENIR',
   'DOKUMENTASI_PREWEDDING', 'PERCETAKAN_UNDANGAN', 'PENGHULU', 'CATERING_PRASMANAN',
@@ -37,7 +37,13 @@ export default function AddVendorForm({ onClose, onSuccess }: Props) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      if (name === "category" && value === "PAKET_WEDDING" && prev.notes === "") {
+        newData.notes = "Termasuk: Venue, Catering (... pax), Dekorasi, MUA, Dokumentasi";
+      }
+      return newData;
+    });
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -191,11 +191,13 @@ export default function BudgetDashboard() {
             <Store className="w-16 h-16 text-gray-200 mx-auto mb-4" />
             <h3 className="font-serif text-xl font-bold text-[#1A1A1A] mb-2">Belum ada vendor</h3>
             <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
-              Mulai catat pengeluaran dan kontrak dengan menambahkan vendor pertamamu!
+              Mulai catat pengeluaran dan kontrak dengan menambahkan vendor pertamamu! Di Indonesia, sering ada opsi paket All-in-One juga.
             </p>
-            <button onClick={() => setShowAddForm(true)} className="px-6 py-3 bg-[#C8975A] text-white rounded-xl font-bold hover:bg-[#B3854A] transition-colors inline-flex items-center gap-2">
-              <Plus className="w-5 h-5" /> Tambah Vendor
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button onClick={() => setShowAddForm(true)} className="px-6 py-3 bg-[#C8975A] text-white rounded-xl font-bold hover:bg-[#B3854A] transition-colors inline-flex items-center gap-2">
+                <Plus className="w-5 h-5" /> Tambah Vendor
+              </button>
+            </div>
           </div>
         ) : filteredVendors.length === 0 ? (
           <div className="text-center py-12 text-gray-500 text-sm">Tidak ada vendor di kategori ini.</div>
@@ -230,6 +232,7 @@ export default function BudgetDashboard() {
         {showAddForm && <AddVendorForm onClose={() => setShowAddForm(false)} onSuccess={loadData} />}
         {paymentVendor && <PaymentModal vendor={paymentVendor} onClose={() => setPaymentVendor(null)} onSuccess={loadData} />}
         {showComparison && <VendorComparisonModal vendors={vendors} onClose={() => setShowComparison(false)} />}
+        {editVendor && <EditVendorModal vendor={editVendor} onClose={() => setEditVendor(null)} onSuccess={loadData} />}
       </AnimatePresence>
     </div>
   );
