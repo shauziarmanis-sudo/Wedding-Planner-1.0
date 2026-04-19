@@ -54,7 +54,7 @@ export default function TaskCard({ task, onStatusChange }: TaskCardProps) {
     });
   }
 
-  const cfg = statusConfig[task.status];
+  const cfg = statusConfig[task.status] || statusConfig["BELUM"];
 
   return (
     <motion.div
