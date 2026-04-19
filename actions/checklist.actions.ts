@@ -29,7 +29,7 @@ const UserProfileSchema = z.object({
 });
 
 const AddTaskSchema = z.object({
-  phase_label: z.enum(["H-6 Bulan", "H-5 Bulan", "H-4 Bulan", "H-3 Bulan", "H-2 Bulan", "H-1 Bulan"]),
+  phase_label: z.string().min(1),
   days_before: z.number().int().nonnegative().optional(),
   category: z.string().min(1),
   title: z.string().min(1),

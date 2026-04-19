@@ -189,7 +189,7 @@ export default function BudgetDashboard() {
           {categories.map(cat => (
             <button
               key={cat}
-              onClick={() => setActiveCategory(cat as any)}
+              onClick={() => setActiveCategory(cat as VendorCategory | "ALL")}
               className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                 activeCategory === cat ? "bg-[#1A1A1A] text-white" : "bg-white text-gray-600 border hover:bg-gray-50"
               }`}
