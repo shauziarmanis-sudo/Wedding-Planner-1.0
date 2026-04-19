@@ -42,19 +42,29 @@ export const initialSheetSchema: SheetSchema = {
       }]
     },
     {
-      properties: { title: SHEETS_CONFIG.tabs.vendors },
+      properties: { title: SHEETS_CONFIG.tabs.budget },
       data: [{
         rowData: [
           {
             values: [
-              { userEnteredValue: { stringValue: 'ID' } },
-              { userEnteredValue: { stringValue: 'Category' } },
-              { userEnteredValue: { stringValue: 'Name' } },
-              { userEnteredValue: { stringValue: 'TotalCost' } },
-              { userEnteredValue: { stringValue: 'PaidAmount' } },
-              { userEnteredValue: { stringValue: 'Status' } },
-              { userEnteredValue: { stringValue: 'DueDate' } },
-              { userEnteredValue: { stringValue: 'Notes' } },
+              { userEnteredValue: { stringValue: 'vendor_id' } },
+              { userEnteredValue: { stringValue: 'category' } },
+              { userEnteredValue: { stringValue: 'vendor_name' } },
+              { userEnteredValue: { stringValue: 'contact_name' } },
+              { userEnteredValue: { stringValue: 'phone_wa' } },
+              { userEnteredValue: { stringValue: 'instagram' } },
+              { userEnteredValue: { stringValue: 'estimated_cost' } },
+              { userEnteredValue: { stringValue: 'actual_cost' } },
+              { userEnteredValue: { stringValue: 'dp_amount' } },
+              { userEnteredValue: { stringValue: 'dp_date' } },
+              { userEnteredValue: { stringValue: 'paid_amount' } },
+              { userEnteredValue: { stringValue: 'status' } },
+              { userEnteredValue: { stringValue: 'payment_notes' } },
+              { userEnteredValue: { stringValue: 'contract_signed' } },
+              { userEnteredValue: { stringValue: 'contract_date' } },
+              { userEnteredValue: { stringValue: 'vendor_rating' } },
+              { userEnteredValue: { stringValue: 'notes' } },
+              { userEnteredValue: { stringValue: 'created_at' } },
             ]
           }
         ]
