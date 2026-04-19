@@ -59,6 +59,8 @@ export default function BudgetDashboard() {
     ? Math.min(100, Math.round((summary.total_paid / summary.total_actual) * 100)) 
     : 0;
 
+  const hasPaketWedding = vendors.filter(v => v.category === "PAKET_WEDDING").length >= 2;
+
   return (
     <div className="space-y-8 relative pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -67,12 +69,22 @@ export default function BudgetDashboard() {
           <p className="text-sm text-gray-500 mt-1">Lacak pengeluaran dan kelola vendor pernikahan Anda</p>
         </div>
         
-        <button 
-          onClick={() => setShowComparison(true)}
-          className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm border border-indigo-100 hover:bg-indigo-100 transition-colors"
-        >
-          ⚖️ Bandingkan Vendor
-        </button>
+        <div className="flex items-center gap-2">
+          {hasPaketWedding && (
+            <button 
+              onClick={() => setShowComparison(true)}
+              className="px-4 py-2 bg-gradient-to-r from-[#C2185B]/10 to-[#E91E63]/10 text-[#C2185B] rounded-xl font-bold text-sm border border-[#C2185B]/20 hover:from-[#C2185B]/20 hover:to-[#E91E63]/20 transition-all"
+            >
+              💍 Bandingkan Paket Wedding
+            </button>
+          )}
+          <button 
+            onClick={() => setShowComparison(true)}
+            className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm border border-indigo-100 hover:bg-indigo-100 transition-colors"
+          >
+            ⚖️ Bandingkan Vendor
+          </button>
+        </div>
       </div>
 
       {/* ── Summary Metrics ── */}
