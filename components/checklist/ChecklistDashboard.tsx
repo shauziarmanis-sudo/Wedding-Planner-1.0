@@ -42,7 +42,7 @@ export default function ChecklistDashboard() {
 
   async function loadData() {
     setIsLoading(true);
-    const [fetchedTasks, fetchedProgress, fetchedMetadata] = await Promise.all([
+    const [fetchedTasks, progressData, fetchedMetadata] = await Promise.all([
       getChecklist(),
       getChecklistProgress(),
       getMetadata(),
@@ -52,11 +52,11 @@ export default function ChecklistDashboard() {
       setNeedsOnboarding(true);
     } else {
       setTasks(fetchedTasks);
-      setProgress(fetchedProgress);
+      setProgress(progressData.by_phase);
       setMetadata(fetchedMetadata);
       // Ensure activePhase is still valid, else default to first
-      if (fetchedProgress.length > 0 && !fetchedProgress.find(p => p.phase === activePhase)) {
-        setActivePhase(fetchedProgress[0].phase);
+      if (progressData.by_phase.length > 0 && !progressData.by_phase.find(p => p.phase === activePhase)) {
+        setActivePhase(progressData.by_phase[0].phase);
       }
       setNeedsOnboarding(false);
     }
