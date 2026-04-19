@@ -5,7 +5,11 @@ type S = ChecklistSeedTask;
 const t = (
   phase_label: S['phase_label'], days_before: number, category: S['category'],
   title: string, description: string, adat_filter: string, assignee: S['assignee'], is_required: boolean
-): S => ({ phase_label, days_before, category, title, description, adat_filter, assignee, is_required });
+): S => ({ 
+  phase_label, days_before, category, title, description, 
+  adat_tags: adat_filter === 'ALL' ? ['ALL'] : adat_filter.split(',') as any, 
+  assignee, is_required 
+});
 
 export const MASTER_CHECKLIST: ChecklistSeedTask[] = [
   // ═══ H-6 BULAN (180 days) ═══
