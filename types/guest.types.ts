@@ -33,3 +33,21 @@ export interface GuestStats {
   invitation_sent_count: number;
   by_category: { category: GuestCategory; count: number; confirmed_pax: number }[];
 }
+
+export type GuestType = 'PERSONAL' | 'GRUP';
+
+export interface GuestImportRow {
+  name: string;
+  phone_wa: string;
+  category: GuestCategory;
+  pax_estimate: number;
+  notes?: string;
+  guest_type: GuestType;
+}
+
+export interface WATemplate {
+  id: string;
+  name: string;
+  description: string;
+  preview: (guestName: string, link: string, metadata: any) => string;
+}

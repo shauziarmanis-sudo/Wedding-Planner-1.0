@@ -7,7 +7,6 @@ import { GoogleSheetsService } from "@/lib/googleService";
 import { SHEETS_CONFIG } from "@/config/sheets";
 import { ChecklistDocument, Religion, DocParty, DocStatus } from "@/types/document.types";
 import { DOCUMENT_MASTER_DATA } from "@/lib/kua-master-data";
-import { withRateLimit } from "@/lib/rateLimiter";
 
 const DOC_HEADERS = [
   'doc_id', 'religion', 'party', 'category', 'doc_name', 

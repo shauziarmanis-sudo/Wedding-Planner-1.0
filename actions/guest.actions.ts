@@ -5,8 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { GoogleSheetsService } from "@/lib/googleService";
 import { SHEETS_CONFIG } from "@/config/sheets";
-import { Guest, GuestCategory, RSVPStatus, GiftType, GuestStats } from "@/types/guest.types";
-import { withRateLimit } from "@/lib/rateLimiter";
+import { Guest, GuestCategory, RSVPStatus, GiftType, GuestStats, GuestImportRow } from "@/types/guest.types";
 import { revalidatePath } from "next/cache";
 
 const GUEST_HEADERS = [
@@ -302,3 +301,98 @@ export async function getGuestPublic(guest_id: string, token: string): Promise<G
     return null;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// BATCH OPERATIONS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Batch insert guests from Excel import.
+ * Validates that name is not empty, builds rows, and calls appendRows().
+ */
+export async function bulkAddGuests(
+  guests: GuestImportRow[]
+): Promise<{ success: boolean; added: number; errors: string[] }> {
+  try {
+    const { service, spreadsheetId } = await getAuthService();
+    const now = new Date().toISOString();
+    const errors: string[] = [];
+    const validRows: (string | number)[][] = [];
+
+    for (let i = 0; i < guests.length; i++) {
+      const g = guests[i];
+      if (!g.name || g.name.trim() === '') {
+        errors.push(`Baris ${i + 1}: Nama kosong, dilewati.`);
+        continue;
+      }
+
+      const guest_id = `g_${nanoid(8)}`;
+      validRows.push([
+        guest_id,
+        g.name.trim(),
+        g.category || 'KENALAN',
+        g.phone_wa || '',
+        '', // address
+        g.pax_estimate || 1,
+        'BELUM_KONFIRMASI',
+        0, // actual_pax
+        0, // gift_amount
+        'TIDAK_ADA',
+        '', // rsvp_at
+        '', // table_number
+        '', // seat_notes
+        'TIDAK', // invitation_sent
+        '', // invitation_sent_at
+        g.notes || '',
+        now,
+      ]);
+    }
+
+    if (validRows.length > 0) {
+      await service.appendRows(spreadsheetId, SHEETS_CONFIG.ranges.guests, validRows);
+    }
+
+    revalidatePath("/dashboard/guests");
+    return { success: true, added: validRows.length, errors };
+  } catch (error: any) {
+    return { success: false, added: 0, errors: [error.message] };
+  }
+}
+
+/**
+ * Mark multiple guests as invitation sent using batchUpdateValues.
+ * Updates column N (invitation_sent = YA) and O (invitation_sent_at = timestamp).
+ */
+export async function markBulkInvitationSent(
+  guest_ids: string[]
+): Promise<{ success: boolean }> {
+  try {
+    const { service, spreadsheetId } = await getAuthService();
+    const rows = await service.readRows(spreadsheetId, SHEETS_CONFIG.ranges.guests);
+    if (!rows) return { success: false };
+
+    const now = new Date().toISOString();
+    const batchData: { range: string; values: (string | number)[][] }[] = [];
+
+    for (const id of guest_ids) {
+      const rowIndex = rows.findIndex(r => r[0] === id);
+      if (rowIndex !== -1) {
+        batchData.push({
+          range: `guests!N${rowIndex + 2}:O${rowIndex + 2}`,
+          values: [['YA', now]],
+        });
+      }
+    }
+
+    if (batchData.length > 0) {
+      await service.batchUpdateValues(spreadsheetId, batchData);
+    }
+
+    revalidatePath("/dashboard/guests");
+    return { success: true };
+  } catch (error: any) {
+    console.error("markBulkInvitationSent error:", error);
+    return { success: false };
+  }
+}
+

@@ -1,14 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Search, MessageCircle, Copy, Trash2, Edit2, Wallet, Users, CheckCircle2, Clock, Filter } from "lucide-react";
+import {
+  Search, Users, CheckCircle2, Clock, Wallet,
+  Plus, Send, MoreHorizontal, Copy, MessageCircle, Edit2, Trash2,
+  ChevronDown, FileSpreadsheet, UserPlus,
+} from "lucide-react";
 import { Guest, GuestStats, GuestCategory } from "@/types/guest.types";
-import { deleteGuest } from "@/actions/guest.actions";
+import { getGuests, getGuestStats, deleteGuest, markBulkInvitationSent } from "@/actions/guest.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import GiftRecordModal from "./GiftRecordModal";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import AddGuestModal from "./AddGuestModal";
+import EditGuestModal from "./EditGuestModal";
+import ImportExcelModal from "./ImportExcelModal";
+import BulkSendModal from "./BulkSendModal";
+import toast from "react-hot-toast";
 
 interface Props {
   initialGuests: Guest[];
@@ -26,12 +34,67 @@ const CATEGORIES: { id: GuestCategory; label: string }[] = [
   { id: 'VIP', label: 'VIP' },
 ];
 
+const CATEGORY_COLORS: Record<GuestCategory, string> = {
+  KELUARGA_PRIA: 'bg-blue-50 text-blue-600',
+  KELUARGA_WANITA: 'bg-pink-50 text-pink-600',
+  SAHABAT: 'bg-green-50 text-green-600',
+  REKAN_KERJA: 'bg-purple-50 text-purple-600',
+  KENALAN: 'bg-gray-50 text-gray-500',
+  VIP: 'bg-amber-50 text-amber-600',
+};
+
+const RSVP_DOT: Record<string, string> = {
+  HADIR: 'bg-green-500',
+  TIDAK_HADIR: 'bg-red-500',
+  RAGU: 'bg-amber-500',
+  BELUM_KONFIRMASI: 'bg-gray-300',
+};
+
+const RSVP_LABEL: Record<string, string> = {
+  HADIR: 'Hadir',
+  TIDAK_HADIR: 'Tidak Hadir',
+  RAGU: 'Ragu',
+  BELUM_KONFIRMASI: 'Belum',
+};
+
 export default function GuestDashboardClient({ initialGuests, initialStats, token, metadata }: Props) {
   const [guests, setGuests] = useState<Guest[]>(initialGuests);
   const [stats, setStats] = useState<GuestStats>(initialStats);
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<GuestCategory | 'ALL'>('ALL');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Modal states
+  const [showAddDropdown, setShowAddDropdown] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showBulkSendModal, setShowBulkSendModal] = useState(false);
   const [selectedGuestForGift, setSelectedGuestForGift] = useState<Guest | null>(null);
+  const [selectedGuestForEdit, setSelectedGuestForEdit] = useState<Guest | null>(null);
+  const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
+
+  const addDropdownRef = useRef<HTMLDivElement>(null);
+  const actionMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (addDropdownRef.current && !addDropdownRef.current.contains(e.target as Node)) {
+        setShowAddDropdown(false);
+      }
+      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+        setOpenActionMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const refresh = async () => {
+    const [g, s] = await Promise.all([getGuests(), getGuestStats()]);
+    setGuests(g);
+    setStats(s);
+  };
 
   const filteredGuests = guests.filter(g => {
     const matchSearch = g.name.toLowerCase().includes(search.toLowerCase()) || g.phone_wa.includes(search);
@@ -39,202 +102,361 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
     return matchSearch && matchCat;
   });
 
-  const chartData = [
-    { name: 'Hadir', value: stats.rsvp_hadir, color: '#22c55e' },
-    { name: 'Absen', value: stats.rsvp_tidak_hadir, color: '#ef4444' },
-    { name: 'Belum', value: stats.rsvp_belum, color: '#94a3b8' },
-  ];
-
   const handleDelete = async (id: string) => {
-    if (!confirm("Hapus tamu ini?")) return;
-    await deleteGuest(id);
-    setGuests(guests.filter(g => g.guest_id !== id));
+    if (!confirm("Hapus tamu ini? Tindakan ini tidak bisa dibatalkan.")) return;
+    try {
+      await deleteGuest(id);
+      setGuests(prev => prev.filter(g => g.guest_id !== id));
+      toast.success("Tamu berhasil dihapus.");
+      refresh();
+    } catch {
+      toast.error("Gagal menghapus tamu.");
+    }
   };
 
   const copyLink = (id: string) => {
     const link = `${window.location.origin}/invitation/${id}?t=${token}`;
     navigator.clipboard.writeText(link);
-    alert("Link undangan disalin!");
+    toast.success("Link undangan berhasil disalin!");
+    setOpenActionMenu(null);
   };
 
-  const openWA = (guest: Guest) => {
+  const openWA = async (guest: Guest) => {
     const link = `${window.location.origin}/invitation/${guest.guest_id}?t=${token}`;
-    const text = `Kepada Yth. Bapak/Ibu/Saudara/i ${guest.name}\n\nKami mengundang Anda ke acara pernikahan kami pada 12 Januari 2026. Konfirmasi kehadiran Anda melalui link ini: ${link}`;
+    const text = `Kepada Yth. Bapak/Ibu/Saudara/i ${guest.name}\n\nKami mengundang Anda pada acara pernikahan kami. Konfirmasi kehadiran Anda melalui link ini: ${link}`;
     window.open(`https://wa.me/${guest.phone_wa}?text=${encodeURIComponent(text)}`, '_blank');
+    await markBulkInvitationSent([guest.guest_id]);
+    setGuests(prev => prev.map(g => g.guest_id === guest.guest_id ? { ...g, invitation_sent: true, invitation_sent_at: new Date().toISOString() } : g));
+    toast.success(`Undangan untuk ${guest.name} dibuka di WA.`);
+    setOpenActionMenu(null);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredGuests.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredGuests.map(g => g.guest_id)));
+    }
+  };
+
+  const handleAddSuccess = (newGuest: Guest) => {
+    setGuests(prev => [newGuest, ...prev]);
+    setShowAddModal(false);
+    refresh();
+  };
+
+  const handleEditSuccess = (updated: Guest) => {
+    setGuests(prev => prev.map(g => g.guest_id === updated.guest_id ? updated : g));
+    setSelectedGuestForEdit(null);
+    refresh();
+  };
+
+  const handleBulkSendComplete = (sentIds: string[], skippedIds: string[]) => {
+    setShowBulkSendModal(false);
+    if (sentIds.length > 0) {
+      setGuests(prev => prev.map(g =>
+        sentIds.includes(g.guest_id) ? { ...g, invitation_sent: true, invitation_sent_at: new Date().toISOString() } : g
+      ));
+      toast.success(`${sentIds.length} undangan berhasil dikirim!`);
+    }
+    refresh();
   };
 
   return (
-    <div className="space-y-8">
-      {/* ── Stats Overview ── */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Total Tamu</p>
-            <p className="text-2xl font-bold">{stats.total_guests}</p>
-          </div>
+    <div className="space-y-6 pb-20">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-serif text-3xl font-bold text-[#1A1A1A]">Daftar Tamu</h1>
+          <p className="text-sm text-gray-500 mt-1">{stats.total_guests} tamu terdaftar</p>
         </div>
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Hadir</p>
-            <p className="text-2xl font-bold">{stats.total_pax_confirmed} <span className="text-sm font-normal text-gray-400">Pax</span></p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Belum RSVP</p>
-            <p className="text-2xl font-bold">{stats.rsvp_belum}</p>
-          </div>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600">
-            <Wallet className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Amplop</p>
-            <p className="text-2xl font-bold">Rp {(stats.total_gifts / 1000000).toFixed(1)}M</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* ── Filters & Table ── */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input 
-                placeholder="Cari nama atau nomor WA..." 
-                className="pl-12 rounded-2xl bg-white border-none shadow-sm h-12"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar pb-2 md:pb-0">
-               <Button 
-                variant={activeCategory === 'ALL' ? 'default' : 'ghost'} 
-                onClick={() => setActiveCategory('ALL')}
-                className="rounded-full"
-               >Semua</Button>
-               {CATEGORIES.map(c => (
-                 <Button 
-                  key={c.id} 
-                  variant={activeCategory === c.id ? 'default' : 'ghost'} 
-                  onClick={() => setActiveCategory(c.id)}
-                  className="rounded-full whitespace-nowrap"
-                 >{c.label}</Button>
-               ))}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="bg-gray-50/50 text-gray-400 font-bold uppercase text-[10px] tracking-widest border-b border-gray-100">
-                  <th className="px-6 py-4">Nama & Kategori</th>
-                  <th className="px-6 py-4">Status RSVP</th>
-                  <th className="px-6 py-4">Pax</th>
-                  <th className="px-6 py-4">Undangan</th>
-                  <th className="px-6 py-4 text-right">Aksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {filteredGuests.map((guest) => (
-                  <tr key={guest.guest_id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-[#1A1A1A]">{guest.name}</p>
-                      <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">{guest.category.replace('_', ' ')}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        guest.rsvp_status === 'HADIR' ? "bg-green-50 text-green-600" :
-                        guest.rsvp_status === 'TIDAK_HADIR' ? "bg-red-50 text-red-600" :
-                        "bg-gray-50 text-gray-400"
-                      }`}>
-                        {guest.rsvp_status.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 font-medium">{guest.rsvp_status === 'HADIR' ? guest.actual_pax : guest.pax_estimate}</td>
-                    <td className="px-6 py-4">
-                      <span className={`text-[10px] font-bold ${guest.invitation_sent ? "text-blue-500" : "text-gray-300"}`}>
-                        {guest.invitation_sent ? "TERKIRIM" : "BELUM"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" onClick={() => openWA(guest)} className="text-green-500"><MessageCircle className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => copyLink(guest.guest_id)}><Copy className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => setSelectedGuestForGift(guest)}><Wallet className="w-4 h-4" /></Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(guest.guest_id)} className="text-red-400"><Trash2 className="w-4 h-4" /></Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* ── RSVP Chart & Sidebar ── */}
-        <div className="space-y-8">
-          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm text-center">
-            <h3 className="font-serif text-lg mb-6">Komposisi RSVP</h3>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
+        <div className="flex items-center gap-3">
+          {/* Add Dropdown */}
+          <div className="relative" ref={addDropdownRef}>
+            <Button
+              onClick={() => setShowAddDropdown(!showAddDropdown)}
+              className="rounded-xl h-11 bg-[#1A1A1A] hover:bg-[#333] text-white px-4"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Tambah Tamu
+              <ChevronDown className="w-3.5 h-3.5 ml-2" />
+            </Button>
+            <AnimatePresence>
+              {showAddDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-30"
+                >
+                  <button
+                    onClick={() => { setShowAddDropdown(false); setShowAddModal(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left text-sm"
                   >
-                    {chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center gap-4 mt-4">
-              {chartData.map(d => (
-                <div key={d.name} className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: d.color }}></div>
-                  <span className="text-xs text-gray-500">{d.name}</span>
-                </div>
-              ))}
-            </div>
+                    <UserPlus className="w-4 h-4 text-gray-500" />
+                    <span className="font-medium">Isi Manual</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowAddDropdown(false); setShowImportModal(true); }}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left text-sm border-t border-gray-50"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-gray-500" />
+                    <span className="font-medium">Import Excel</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          <div className="bg-[#1A1A1A] p-8 rounded-3xl text-white shadow-xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full"></div>
-             <h3 className="font-serif text-xl mb-4 relative z-10">Undangan Digital</h3>
-             <p className="text-gray-400 text-sm mb-6 relative z-10">Kirim undangan digital personal ke tamu Anda via WhatsApp.</p>
-             <Button className="w-full bg-[#C8975A] hover:bg-[#B68649] text-white rounded-2xl h-12">
-               Blast WA Undangan
-             </Button>
-          </div>
+          {/* Bulk Send Button */}
+          <Button
+            onClick={() => setShowBulkSendModal(true)}
+            className="rounded-xl h-11 bg-[#C8975A] hover:bg-[#B68649] text-white px-4"
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Kirim Undangan
+          </Button>
         </div>
       </div>
+
+      {/* ── Stats Cards ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Tamu', value: stats.total_guests, sub: `${stats.total_pax_estimate} Pax`, icon: Users, iconBg: 'bg-purple-50', iconColor: 'text-purple-600' },
+          { label: 'Hadir', value: stats.total_pax_confirmed, sub: 'Pax konfirmasi', icon: CheckCircle2, iconBg: 'bg-green-50', iconColor: 'text-green-600' },
+          { label: 'Belum RSVP', value: stats.rsvp_belum, sub: 'Menunggu', icon: Clock, iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
+          { label: 'Total Amplop', value: `Rp ${stats.total_gifts >= 1_000_000 ? (stats.total_gifts / 1_000_000).toFixed(1) + 'M' : stats.total_gifts.toLocaleString('id-ID')}`, sub: '', icon: Wallet, iconBg: 'bg-orange-50', iconColor: 'text-orange-600' },
+        ].map((card, i) => (
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08 }}
+            className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4"
+          >
+            <div className={`w-11 h-11 ${card.iconBg} rounded-xl flex items-center justify-center ${card.iconColor}`}>
+              <card.icon className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{card.label}</p>
+              <p className="text-xl font-bold text-[#1A1A1A]">{card.value}</p>
+              {card.sub && <p className="text-[10px] text-gray-400">{card.sub}</p>}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ── Filter Row ── */}
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Cari nama atau nomor WA..."
+            className="pl-12 rounded-xl bg-white border-gray-200 shadow-sm h-11"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <button
+            onClick={() => setActiveCategory('ALL')}
+            className={`px-4 py-2 rounded-full text-xs font-semibold border whitespace-nowrap transition-all ${
+              activeCategory === 'ALL'
+                ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            Semua
+          </button>
+          {CATEGORIES.map(c => (
+            <button
+              key={c.id}
+              onClick={() => setActiveCategory(c.id)}
+              className={`px-4 py-2 rounded-full text-xs font-semibold border whitespace-nowrap transition-all ${
+                activeCategory === c.id
+                  ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Guest Table ── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="bg-gray-50/80 text-gray-400 font-bold uppercase text-[10px] tracking-widest border-b border-gray-100">
+                <th className="px-4 py-3.5 w-10">
+                  <input
+                    type="checkbox"
+                    checked={filteredGuests.length > 0 && selectedIds.size === filteredGuests.length}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-gray-300 text-[#C8975A] focus:ring-[#C8975A]"
+                  />
+                </th>
+                <th className="px-4 py-3.5">Nama</th>
+                <th className="px-4 py-3.5">Kategori</th>
+                <th className="px-4 py-3.5">Status RSVP</th>
+                <th className="px-4 py-3.5 text-center">WA Terkirim</th>
+                <th className="px-4 py-3.5 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filteredGuests.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-16 text-center text-gray-400">
+                    <Users className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                    <p className="font-medium">Belum ada tamu</p>
+                    <p className="text-xs mt-1">Tambahkan tamu pertama Anda</p>
+                  </td>
+                </tr>
+              )}
+              {filteredGuests.map((guest) => (
+                <tr key={guest.guest_id} className="hover:bg-gray-50/50 transition-colors group">
+                  {/* Checkbox */}
+                  <td className="px-4 py-3.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(guest.guest_id)}
+                      onChange={() => toggleSelect(guest.guest_id)}
+                      className="w-4 h-4 rounded border-gray-300 text-[#C8975A] focus:ring-[#C8975A]"
+                    />
+                  </td>
+
+                  {/* Name + Badge */}
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="font-semibold text-[#1A1A1A]">{guest.name}</p>
+                        <span className={`inline-block mt-0.5 px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${
+                          guest.pax_estimate > 1 ? 'bg-purple-50 text-purple-600' : 'bg-gray-50 text-gray-500'
+                        }`}>
+                          {guest.pax_estimate > 1 ? `GRUP · ${guest.pax_estimate} Pax` : 'PERSONAL'}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Category */}
+                  <td className="px-4 py-3.5">
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${CATEGORY_COLORS[guest.category]}`}>
+                      {guest.category.replace(/_/g, ' ')}
+                    </span>
+                  </td>
+
+                  {/* RSVP */}
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${RSVP_DOT[guest.rsvp_status]}`} />
+                      <span className="text-xs text-gray-600 font-medium">{RSVP_LABEL[guest.rsvp_status]}</span>
+                    </div>
+                  </td>
+
+                  {/* WA Sent */}
+                  <td className="px-4 py-3.5 text-center">
+                    {guest.invitation_sent ? (
+                      <span className="text-green-500 font-bold text-xs">✓</span>
+                    ) : (
+                      <span className="text-gray-300 font-bold text-xs">✗</span>
+                    )}
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3.5 text-right">
+                    <div className="relative inline-block">
+                      <button
+                        onClick={() => setOpenActionMenu(openActionMenu === guest.guest_id ? null : guest.guest_id)}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      >
+                        <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                      </button>
+                      <AnimatePresence>
+                        {openActionMenu === guest.guest_id && (
+                          <motion.div
+                            ref={actionMenuRef}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="absolute right-0 mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20"
+                          >
+                            <button onClick={() => copyLink(guest.guest_id)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
+                              <Copy className="w-4 h-4 text-gray-400" /> Salin Link Undangan
+                            </button>
+                            <button onClick={() => openWA(guest)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
+                              <MessageCircle className="w-4 h-4 text-[#25D366]" /> Kirim WA Sekarang
+                            </button>
+                            <button onClick={() => { setSelectedGuestForGift(guest); setOpenActionMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
+                              <Wallet className="w-4 h-4 text-orange-500" /> Catat Amplop
+                            </button>
+                            <button onClick={() => { setSelectedGuestForEdit(guest); setOpenActionMenu(null); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
+                              <Edit2 className="w-4 h-4 text-blue-500" /> Edit Data Tamu
+                            </button>
+                            <div className="border-t border-gray-50" />
+                            <button onClick={() => { setOpenActionMenu(null); handleDelete(guest.guest_id); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 text-sm text-left transition-colors text-red-500">
+                              <Trash2 className="w-4 h-4" /> Hapus
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── Modals ── */}
+      <AddGuestModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={handleAddSuccess}
+      />
+
+      <ImportExcelModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={refresh}
+      />
+
+      <BulkSendModal
+        isOpen={showBulkSendModal}
+        guests={guests}
+        token={token}
+        metadata={metadata}
+        onClose={() => setShowBulkSendModal(false)}
+        onComplete={handleBulkSendComplete}
+      />
+
+      {selectedGuestForEdit && (
+        <EditGuestModal
+          isOpen={true}
+          guest={selectedGuestForEdit}
+          onClose={() => setSelectedGuestForEdit(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
 
       {selectedGuestForGift && (
-        <GiftRecordModal 
+        <GiftRecordModal
           guest={selectedGuestForGift}
           onClose={() => setSelectedGuestForGift(null)}
           onSuccess={() => {
             setSelectedGuestForGift(null);
-            // Refresh logic should be here
+            refresh();
           }}
         />
       )}
