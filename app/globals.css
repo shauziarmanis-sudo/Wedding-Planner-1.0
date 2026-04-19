@@ -24,6 +24,32 @@
     --input: 0 0% 89.8%;
     --ring: 336 86% 43%;
     --radius: 0.75rem;
+
+    /* Adat Colors */
+    --adat-jawa:         #92400E;
+    --adat-jawa-light:   #FEF3C7;
+    --adat-sunda:        #166534;
+    --adat-sunda-light:  #DCFCE7;
+    --adat-batak:        #1E3A5F;
+    --adat-batak-light:  #DBEAFE;
+    --adat-minang:       #7C2D12;
+    --adat-minang-light: #FFEDD5;
+    --adat-betawi:       #831843;
+    --adat-betawi-light: #FCE7F3;
+    --adat-bali:         #065F46;
+    --adat-bali-light:   #D1FAE5;
+    --adat-bugis:        #1D4ED8;
+    --adat-bugis-light:  #DBEAFE;
+    --adat-melayu:       #065F46;
+    --adat-melayu-light: #ECFDF5;
+    --adat-dayak:        #3B0764;
+    --adat-dayak-light:  #F3E8FF;
+    --adat-toraja:       #7F1D1D;
+    --adat-toraja-light: #FEF2F2;
+    --adat-islami:       #0F766E;
+    --adat-islami-light: #CCFBF1;
+    --adat-modern:       #374151;
+    --adat-modern-light: #F9FAFB;
   }
 }
 

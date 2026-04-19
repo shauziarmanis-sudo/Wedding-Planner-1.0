@@ -2,12 +2,16 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useTransition } from "react";
-import { CheckCircle2, ListTodo, Search, AlertTriangle, Edit2, Check, X } from "lucide-react";
-import { ChecklistTask, TaskPhase, TaskAssignee, ChecklistProgress } from "@/types/checklist.types";
+import { CheckCircle2, ListTodo, Search, AlertTriangle, Edit2, Check, X, Settings2 } from "lucide-react";
+import { ChecklistTask, TaskPhase, TaskAssignee, ChecklistProgress, UserProfile } from "@/types/checklist.types";
 import { getChecklist, getChecklistProgress, renamePhase } from "@/actions/checklist.actions";
-import ChecklistOnboarding from "./ChecklistOnboarding";
+import { getMetadata } from "@/actions/metadata";
+import AdatOnboarding from "./AdatOnboarding";
+import { AdatSwitcherModal } from "./AdatSwitcherModal";
+import { AdatInfoCard } from "./AdatInfoCard";
 import ProgressRing from "./ProgressRing";
 import TaskCard from "./TaskCard";
+import { Button } from "@/components/ui/button";
 
 const assignees: { label: string; value: TaskAssignee | "SEMUA" }[] = [
   { label: "Semua", value: "SEMUA" },
@@ -24,6 +28,8 @@ export default function ChecklistDashboard() {
   const [activeAssignee, setActiveAssignee] = useState<TaskAssignee | "SEMUA">("SEMUA");
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [metadata, setMetadata] = useState<any>(null);
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
 
   // Rename state
   const [editingPhase, setEditingPhase] = useState<TaskPhase | null>(null);
@@ -36,9 +42,10 @@ export default function ChecklistDashboard() {
 
   async function loadData() {
     setIsLoading(true);
-    const [fetchedTasks, fetchedProgress] = await Promise.all([
+    const [fetchedTasks, fetchedProgress, fetchedMetadata] = await Promise.all([
       getChecklist(),
       getChecklistProgress(),
+      getMetadata(),
     ]);
 
     if (fetchedTasks.length === 0) {
@@ -46,6 +53,7 @@ export default function ChecklistDashboard() {
     } else {
       setTasks(fetchedTasks);
       setProgress(fetchedProgress);
+      setMetadata(fetchedMetadata);
       // Ensure activePhase is still valid, else default to first
       if (fetchedProgress.length > 0 && !fetchedProgress.find(p => p.phase === activePhase)) {
         setActivePhase(fetchedProgress[0].phase);
@@ -94,6 +102,27 @@ export default function ChecklistDashboard() {
 
   return (
     <div className="space-y-8">
+      {/* ── Adat Header ── */}
+      {metadata?.adat_type && (
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start">
+          <div className="flex-1 max-w-2xl">
+            <AdatInfoCard adat={metadata.adat_type} secondaryAdat={metadata.adat_secondary} />
+          </div>
+          <Button variant="outline" onClick={() => setIsSwitcherOpen(true)} className="shrink-0 gap-2">
+            <Settings2 className="w-4 h-4" />
+            Ganti Adat
+          </Button>
+          
+          <AdatSwitcherModal 
+            isOpen={isSwitcherOpen} 
+            onClose={() => setIsSwitcherOpen(false)} 
+            currentAdat={metadata.adat_type}
+            currentSecondary={metadata.adat_secondary}
+            onSuccess={loadData}
+          />
+        </div>
+      )}
+
       {/* ── Top Summary ── */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-black/[0.06] flex flex-col md:flex-row gap-8 items-center">
         <div className="flex-shrink-0">

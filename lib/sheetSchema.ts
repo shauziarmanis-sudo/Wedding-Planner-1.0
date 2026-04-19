@@ -91,12 +91,14 @@ export const initialSheetSchema: SheetSchema = {
               { userEnteredValue: { stringValue: 'category' } },
               { userEnteredValue: { stringValue: 'title' } },
               { userEnteredValue: { stringValue: 'description' } },
-              { userEnteredValue: { stringValue: 'adat_filter' } },
+              { userEnteredValue: { stringValue: 'adat_tags' } },
               { userEnteredValue: { stringValue: 'is_required' } },
+              { userEnteredValue: { stringValue: 'is_custom' } },
               { userEnteredValue: { stringValue: 'status' } },
               { userEnteredValue: { stringValue: 'completed_at' } },
               { userEnteredValue: { stringValue: 'assignee' } },
               { userEnteredValue: { stringValue: 'notes' } },
+              { userEnteredValue: { stringValue: 'added_by_adat_switch' } },
             ]
           }
         ]
