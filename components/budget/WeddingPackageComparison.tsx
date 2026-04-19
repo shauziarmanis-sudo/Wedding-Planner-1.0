@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Sparkles, Bot, Loader2, Crown, TrendingDown, AlertCircle } from "lucide-react";
 import { Vendor } from "@/types/vendor.types";
@@ -16,10 +16,21 @@ function parsePaketNotes(notes: string): ParsedBenefit[] {
   const lines = notes.split("\n").filter(l => l.trim().startsWith("•") || l.trim().startsWith("-"));
   for (const line of lines) {
     const clean = line.replace(/^[\s•\-]+/, "").trim();
-    // Try to match emoji + label: detail pattern
-    const match = clean.match(/^(.{1,4})\s*(.+?):\s*(.+)$/);
-    if (match) {
-      results.push({ emoji: match[1].trim(), label: match[2].trim(), detail: match[3].trim() });
+    const colonIndex = clean.indexOf(":");
+    
+    if (colonIndex > -1) {
+      const leftPart = clean.substring(0, colonIndex).trim();
+      const detail = clean.substring(colonIndex + 1).trim();
+      
+      // Pisahkan emoji dan label berdasarkan spasi pertama
+      const firstSpaceIndex = leftPart.indexOf(" ");
+      if (firstSpaceIndex > -1) {
+        const emoji = leftPart.substring(0, firstSpaceIndex).trim();
+        const label = leftPart.substring(firstSpaceIndex + 1).trim();
+        results.push({ emoji, label, detail });
+      } else {
+        results.push({ emoji: "📌", label: leftPart, detail });
+      }
     } else if (clean) {
       results.push({ emoji: "📌", label: clean, detail: "Termasuk" });
     }
@@ -60,6 +71,27 @@ export default function WeddingPackageComparison({ vendors, onClose }: Props) {
   const [aiResult, setAiResult] = useState<string | null>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  const [userApiKey, setUserApiKey] = useState("");
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [tempKey, setTempKey] = useState("");
+
+  useEffect(() => {
+    const savedKey = localStorage.getItem("gemini_api_key");
+    if (savedKey) {
+      setUserApiKey(savedKey);
+      setTempKey(savedKey);
+    }
+  }, []);
+
+  const handleSaveKey = () => {
+    if (tempKey.trim()) {
+      localStorage.setItem("gemini_api_key", tempKey.trim());
+      setUserApiKey(tempKey.trim());
+      setShowApiKeyInput(false);
+      handleAIAnalysis(tempKey.trim());
+    }
+  };
+
   const toggleSelect = (id: string) => {
     setSelected(prev => {
       if (prev.includes(id)) return prev.filter(x => x !== id);
@@ -81,13 +113,22 @@ export default function WeddingPackageComparison({ vendors, onClose }: Props) {
   });
   const maxBenefitCount = Math.max(0, ...benefitCounts.map(b => b.count));
 
-  const handleAIAnalysis = async () => {
+  const handleAIAnalysis = async (overrideKey?: string) => {
     if (selectedVendors.length < 2) return;
     setIsAnalyzing(true); setAiError(null); setAiResult(null);
     try {
-      const res = await analyzeWeddingPackages(selectedVendors);
-      if (res.success && res.data) setAiResult(res.data);
-      else setAiError(res.error || "Gagal menganalisis.");
+      const keyToUse = overrideKey || userApiKey || undefined;
+      const res = await analyzeWeddingPackages(selectedVendors, keyToUse);
+      if (res.success && res.data) {
+        setAiResult(res.data);
+      } else {
+        if (res.error === "GEMINI_API_KEY_REQUIRED") {
+          setShowApiKeyInput(true);
+          setAiError("API Key Gemini belum disetel. Silakan masukkan API Key Anda untuk menggunakan fitur AI.");
+        } else {
+          setAiError(res.error || "Gagal menganalisis.");
+        }
+      }
     } catch { setAiError("Koneksi ke AI gagal."); }
     setIsAnalyzing(false);
   };
@@ -275,11 +316,29 @@ export default function WeddingPackageComparison({ vendors, onClose }: Props) {
                 </div>
 
                 {/* AI Analysis Button */}
-                <div className="flex justify-center">
-                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleAIAnalysis} disabled={isAnalyzing}
-                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-600/20 disabled:opacity-60 flex items-center gap-2">
-                    {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Sedang Menganalisis...</> : <><Bot className="w-4 h-4" /> 🤖 AI Analisis — Saran Objektif</>}
-                  </motion.button>
+                <div className="flex flex-col items-center gap-4">
+                  {!showApiKeyInput ? (
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => handleAIAnalysis()} disabled={isAnalyzing}
+                      className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-600/20 disabled:opacity-60 flex items-center gap-2">
+                      {isAnalyzing ? <><Loader2 className="w-4 h-4 animate-spin" /> Sedang Menganalisis...</> : <><Bot className="w-4 h-4" /> 🤖 AI Analisis — Saran Objektif</>}
+                    </motion.button>
+                  ) : (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md bg-white border border-indigo-100 p-4 rounded-2xl shadow-sm">
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Masukkan Gemini API Key Anda</label>
+                      <input 
+                        type="password" 
+                        value={tempKey} 
+                        onChange={(e) => setTempKey(e.target.value)} 
+                        placeholder="AIzaSy..." 
+                        className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => setShowApiKeyInput(false)} className="flex-1 py-2 text-sm font-semibold text-gray-500 hover:bg-gray-50 rounded-xl transition-colors">Batal</button>
+                        <button onClick={handleSaveKey} className="flex-1 py-2 text-sm font-bold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">Simpan & Analisis</button>
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-2 text-center">Key disimpan secara lokal di browser Anda. Dapatkan di <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="text-indigo-500 hover:underline">Google AI Studio</a>.</p>
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* AI Result */}
@@ -296,7 +355,25 @@ export default function WeddingPackageComparison({ vendors, onClose }: Props) {
                   )}
                   {aiError && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                      className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">{aiError}</motion.div>
+                      className="p-5 bg-red-50 border border-red-200 rounded-xl text-sm mt-4">
+                      <div className="flex items-center gap-2 font-bold text-red-800 mb-2">
+                        <AlertCircle className="w-5 h-5" /> Gagal Menjalankan AI
+                      </div>
+                      <p className="text-red-700">{aiError}</p>
+                      
+                      {aiError.includes("GEMINI_API_KEY") && (
+                        <div className="bg-white p-4 rounded-lg border border-red-100 mt-3">
+                          <h4 className="font-bold text-gray-800 mb-2">Cara Mengaktifkan Fitur AI (Untuk Komersil & Lokal):</h4>
+                          <ol className="list-decimal pl-5 text-gray-600 space-y-2 text-xs">
+                            <li>Dapatkan API Key secara gratis di <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-bold">Google AI Studio</a>.</li>
+                            <li><strong>Untuk Lokal (Komputer Anda):</strong> Buka file <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">.env.local</code> di folder project ini dan tambahkan baris berikut:<br/>
+                            <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono text-[#C2185B] mt-1 inline-block">GEMINI_API_KEY=kode_api_anda_disini</code></li>
+                            <li><strong>Untuk Komersil (Server Vercel):</strong> Buka Dashboard project Vercel Anda &gt; Settings &gt; Environment Variables. Tambahkan Key: <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">GEMINI_API_KEY</code> dan Value: kode API Anda.</li>
+                            <li>Setelah disimpan, restart server lokal (jalankan ulang npm run dev) atau deploy ulang di Vercel.</li>
+                          </ol>
+                        </div>
+                      )}
+                    </motion.div>
                   )}
                 </AnimatePresence>
               </motion.div>

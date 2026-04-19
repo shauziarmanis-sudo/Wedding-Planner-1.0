@@ -3,11 +3,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Vendor } from "@/types/vendor.types";
 
-export async function analyzeVendors(vendors: Vendor[]): Promise<{ success: boolean; data?: string; error?: string }> {
+export async function analyzeVendors(vendors: Vendor[], userApiKey?: string): Promise<{ success: boolean; data?: string; error?: string }> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || userApiKey;
     if (!apiKey) {
-      return { success: false, error: "GEMINI_API_KEY belum disetel di Vercel Environment Variables." };
+      return { success: false, error: "GEMINI_API_KEY_REQUIRED" };
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -46,11 +46,11 @@ export async function analyzeVendors(vendors: Vendor[]): Promise<{ success: bool
 }
 
 // ── AI Analysis khusus untuk Paket Wedding ──
-export async function analyzeWeddingPackages(vendors: Vendor[]): Promise<{ success: boolean; data?: string; error?: string }> {
+export async function analyzeWeddingPackages(vendors: Vendor[], userApiKey?: string): Promise<{ success: boolean; data?: string; error?: string }> {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || userApiKey;
     if (!apiKey) {
-      return { success: false, error: "GEMINI_API_KEY belum disetel di Vercel Environment Variables." };
+      return { success: false, error: "GEMINI_API_KEY_REQUIRED" };
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
