@@ -207,11 +207,11 @@ import { ChecklistTask } from '@/types/checklist.types'
 
 export function filterTasksByAdat<T extends { adat_tags: any }>(
   tasks: T[],
-  adat: AdatType,
-  adat_secondary?: AdatType
+  adat: string,
+  adat_secondary?: string
 ): T[] {
   return tasks.filter(task => {
-    const tags = task.adat_tags as string[];
+    const tags = task.adat_tags as readonly string[];
     if (tags.includes('ALL')) return true;
     if (tags.includes(adat)) return true;
     if (adat_secondary && tags.includes(adat_secondary)) return true;

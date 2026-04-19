@@ -139,7 +139,7 @@ export async function initChecklist(
       return { success: true, taskCount: existing.length, error: "Checklist sudah ada" };
     }
 
-    const filtered = filterTasksByAdat(MASTER_CHECKLIST as any, parsed.data.adat_type as AdatType, parsed.data.adat_secondary as AdatType);
+    const filtered = filterTasksByAdat(MASTER_CHECKLIST, parsed.data.adat_type as AdatType, parsed.data.adat_secondary as AdatType);
 
     const rowsToAppend = filtered.map((task) => [
       `ck_${nanoid(8)}`,
@@ -460,8 +460,8 @@ export async function previewAdatSwitch(
 
       const tags = task.adat_tags as readonly string[];
       const matchesNewAdat = tags.includes('ALL') || 
-                             tags.includes(new_adat as any) || 
-                             (new_adat_secondary && tags.includes(new_adat_secondary as any));
+                             tags.includes(new_adat) || 
+                             (new_adat_secondary && tags.includes(new_adat_secondary));
 
       if (matchesNewAdat) {
         tasks_kept.push(task);
@@ -477,7 +477,7 @@ export async function previewAdatSwitch(
 
     // 2. Identify new tasks to add
     const existingTitles = new Set([...tasks_kept, ...tasks_completed_kept].map(t => t.title));
-    const potentialNewTasks = filterTasksByAdat(MASTER_CHECKLIST as any, new_adat, new_adat_secondary);
+    const potentialNewTasks = filterTasksByAdat(MASTER_CHECKLIST, new_adat, new_adat_secondary);
     
     const tasks_added = potentialNewTasks
       .filter(t => !existingTitles.has(t.title))
