@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckCircle2, SkipForward, Send, PartyPopper } from "lucide-react";
 import { Guest, WATemplate } from "@/types/guest.types";
@@ -29,6 +29,15 @@ export default function SendProgressModal({ isOpen, guests, token, metadata, tem
   const [sentIds, setSentIds] = useState<string[]>([]);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentIndex(0);
+      setSentIds([]);
+      setSkippedIds([]);
+      setHistory([]);
+    }
+  }, [isOpen]);
 
   const total = guests.length;
   const processed = sentIds.length + skippedIds.length;

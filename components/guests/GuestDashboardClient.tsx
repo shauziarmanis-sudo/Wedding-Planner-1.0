@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Users, CheckCircle2, Clock, Wallet,
   Plus, Send, MoreHorizontal, Copy, MessageCircle, Edit2, Trash2,
-  ChevronDown, FileSpreadsheet, UserPlus,
+  ChevronDown, FileSpreadsheet, UserPlus, X,
 } from "lucide-react";
 import { Guest, GuestStats, GuestCategory } from "@/types/guest.types";
 import { getGuests, getGuestStats, deleteGuest, markBulkInvitationSent } from "@/actions/guest.actions";
@@ -16,6 +16,7 @@ import AddGuestModal from "./AddGuestModal";
 import EditGuestModal from "./EditGuestModal";
 import ImportExcelModal from "./ImportExcelModal";
 import BulkSendModal from "./BulkSendModal";
+import { generateWABlastText } from "@/lib/wa-template";
 import toast from "react-hot-toast";
 
 interface Props {
@@ -74,7 +75,6 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
   const [openActionMenu, setOpenActionMenu] = useState<string | null>(null);
 
   const addDropdownRef = useRef<HTMLDivElement>(null);
-  const actionMenuRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -82,7 +82,8 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
       if (addDropdownRef.current && !addDropdownRef.current.contains(e.target as Node)) {
         setShowAddDropdown(false);
       }
-      if (actionMenuRef.current && !actionMenuRef.current.contains(e.target as Node)) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-action-menu]')) {
         setOpenActionMenu(null);
       }
     };
@@ -123,10 +124,14 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
 
   const openWA = async (guest: Guest) => {
     const link = `${window.location.origin}/invitation/${guest.guest_id}?t=${token}`;
-    const text = `Kepada Yth. Bapak/Ibu/Saudara/i ${guest.name}\n\nKami mengundang Anda pada acara pernikahan kami. Konfirmasi kehadiran Anda melalui link ini: ${link}`;
+    const text = generateWABlastText(metadata, guest, link);
     window.open(`https://wa.me/${guest.phone_wa}?text=${encodeURIComponent(text)}`, '_blank');
     await markBulkInvitationSent([guest.guest_id]);
-    setGuests(prev => prev.map(g => g.guest_id === guest.guest_id ? { ...g, invitation_sent: true, invitation_sent_at: new Date().toISOString() } : g));
+    setGuests(prev => prev.map(g =>
+      g.guest_id === guest.guest_id
+        ? { ...g, invitation_sent: true, invitation_sent_at: new Date().toISOString() }
+        : g
+    ));
     toast.success(`Undangan untuk ${guest.name} dibuka di WA.`);
     setOpenActionMenu(null);
   };
@@ -170,12 +175,28 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
     refresh();
   };
 
+  const handleBulkDeleteSelected = async () => {
+    if (!confirm(`Hapus ${selectedIds.size} tamu sekaligus? Tindakan ini tidak bisa dibatalkan.`)) return;
+    const toDelete = Array.from(selectedIds);
+    try {
+      for (const id of toDelete) {
+        await deleteGuest(id);
+      }
+      setGuests(prev => prev.filter(g => !selectedIds.has(g.guest_id)));
+      setSelectedIds(new Set());
+      toast.success(`${toDelete.length} tamu berhasil dihapus.`);
+      refresh();
+    } catch {
+      toast.error("Gagal menghapus sebagian tamu.");
+    }
+  };
+
   return (
     <div className="space-y-6 pb-20">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-[#1A1A1A]">Daftar Tamu <span className="text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full align-middle ml-2">v2.0 REBUILT</span></h1>
+          <h1 className="font-serif text-3xl font-bold text-[#1A1A1A]">Daftar Tamu</h1>
           <p className="text-sm text-gray-500 mt-1">{stats.total_guests} tamu terdaftar</p>
         </div>
         <div className="flex items-center gap-3">
@@ -377,6 +398,7 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
                   <td className="px-4 py-3.5 text-right">
                     <div className="relative inline-block">
                       <button
+                        data-action-menu
                         onClick={() => setOpenActionMenu(openActionMenu === guest.guest_id ? null : guest.guest_id)}
                         className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                       >
@@ -385,7 +407,7 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
                       <AnimatePresence>
                         {openActionMenu === guest.guest_id && (
                           <motion.div
-                            ref={actionMenuRef}
+                            data-action-menu
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
@@ -460,6 +482,47 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
           }}
         />
       )}
+
+      <AnimatePresence>
+        {selectedIds.size > 0 && (
+          <motion.div
+            initial={{ y: 60, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 60, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-[#1A1A1A] 
+                       text-white rounded-2xl shadow-2xl shadow-black/30 px-6 py-3.5 
+                       flex items-center gap-4 whitespace-nowrap"
+          >
+            <span className="text-sm font-semibold">
+              {selectedIds.size} tamu dipilih
+            </span>
+            <div className="w-px h-4 bg-white/20" />
+            <button
+              onClick={() => setShowBulkSendModal(true)}
+              className="flex items-center gap-2 text-sm font-semibold text-[#C8975A] 
+                         hover:text-[#DEB078] transition-colors"
+            >
+              <Send className="w-4 h-4" />
+              Kirim Undangan
+            </button>
+            <button
+              onClick={handleBulkDeleteSelected}
+              className="flex items-center gap-2 text-sm font-semibold text-red-400 
+                         hover:text-red-300 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Hapus
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="text-white/30 hover:text-white transition-colors ml-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

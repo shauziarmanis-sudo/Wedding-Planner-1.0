@@ -25,6 +25,7 @@ const FILTER_CHIPS: { id: GuestCategory | 'ALL'; label: string }[] = [
   { id: 'KELUARGA_WANITA', label: 'Keluarga Wanita' },
   { id: 'SAHABAT', label: 'Sahabat' },
   { id: 'REKAN_KERJA', label: 'Rekan Kerja' },
+  { id: 'KENALAN', label: 'Kenalan' },
 ];
 
 const WA_TEMPLATES: WATemplate[] = [
