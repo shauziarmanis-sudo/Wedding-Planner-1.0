@@ -10,12 +10,12 @@ export const SHEETS_CONFIG = {
     checklist: 'Checklist',
   },
   ranges: {
-    metadata: 'Metadata!A2:F',
+    metadata: 'Metadata!A2:J',
     guests: 'Guests!A2:G',
     budget: 'Budget!A2:R',
     gifts: 'Gifts!A2:E',
     transactions: 'Transactions!A2:F',
     savings: 'SavingsGoals!A2:E',
-    checklist: 'Checklist!A2:L',
+    checklist: 'Checklist!A2:N',
   }
 };

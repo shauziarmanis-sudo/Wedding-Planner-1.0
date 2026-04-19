@@ -307,6 +307,30 @@ export async function updateTaskStatus(
   }
 }
 
+export async function renamePhase(oldPhase: string, newPhase: string): Promise<{ success: boolean; error?: string }> {
+  const session = await getSessionData();
+  if (!session?.accessToken || !session?.spreadsheetId) return { success: false, error: "Unauthorized" };
+
+  try {
+    const service = new GoogleSheetsService(session.accessToken);
+    const rows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
+    if (!rows) return { success: false, error: "No data found" };
+
+    const updatedRows = rows.map(row => {
+      if (row[1] === oldPhase) {
+        row[1] = newPhase;
+      }
+      return row;
+    });
+
+    await service.updateRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, updatedRows);
+    return { success: true };
+  } catch (error) {
+    console.error("Error renaming phase:", error);
+    return { success: false, error: "Failed to rename phase" };
+  }
+}
+
 // ── 4. Get Checklist Progress ──
 export async function getChecklistProgress(): Promise<{
   overall: { total: number; completed: number; percentage: number };
@@ -434,9 +458,10 @@ export async function previewAdatSwitch(
         continue;
       }
 
-      const matchesNewAdat = task.adat_tags.includes('ALL' as any) || 
-                             task.adat_tags.includes(new_adat) || 
-                             (new_adat_secondary && task.adat_tags.includes(new_adat_secondary));
+      const tags = task.adat_tags as (string | AdatType)[];
+      const matchesNewAdat = tags.includes('ALL') || 
+                             tags.includes(new_adat as any) || 
+                             (new_adat_secondary && tags.includes(new_adat_secondary as any));
 
       if (matchesNewAdat) {
         tasks_kept.push(task);
