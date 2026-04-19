@@ -24,14 +24,14 @@ export async function POST(req: Request) {
     }
 
     // 2. Audit Vendors (Expenses)
-    const vendorsData = await service.readRows(spreadsheetId, SHEETS_CONFIG.ranges.vendors);
+    const vendorsData = await service.readRows(spreadsheetId, SHEETS_CONFIG.ranges.budget);
     let totalUnpaid = 0;
     if (vendorsData && vendorsData.length > 0) {
-      // Assuming structure: [ID, Category, Name, TotalCost, PaidAmount, Status, DueDate, Notes]
+      // Assuming structure: vendor_id (0), ..., estimated_cost (6), actual_cost (7), ..., paid_amount (10)
       totalUnpaid = vendorsData.reduce((sum, row) => {
-        const totalCost = parseFloat(row[3]) || 0;
-        const paidAmount = parseFloat(row[4]) || 0;
-        return sum + (totalCost - paidAmount);
+        const totalCost = parseFloat(row[7]) || parseFloat(row[6]) || 0;
+        const paidAmount = parseFloat(row[10]) || 0;
+        return sum + Math.max(0, totalCost - paidAmount);
       }, 0);
     }
 
