@@ -119,6 +119,17 @@ export class GoogleSheetsService {
     });
   }
 
+  async updateRows(spreadsheetId: string, range: string, rows: (string | number)[][]): Promise<void> {
+    await withRateLimit(async () => {
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: rows },
+      });
+    });
+  }
+
   async clearRow(spreadsheetId: string, range: string): Promise<void> {
     await withRateLimit(async () => {
       await this.sheets.spreadsheets.values.clear({
