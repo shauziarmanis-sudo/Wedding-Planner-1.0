@@ -8,6 +8,7 @@ export const SHEETS_CONFIG = {
     transactions: 'Transactions',
     savings: 'SavingsGoals',
     checklist: 'Checklist',
+    documents: 'Documents',
   },
   ranges: {
     metadata: 'Metadata!A2:J',
@@ -17,5 +18,6 @@ export const SHEETS_CONFIG = {
     transactions: 'Transactions!A2:F',
     savings: 'SavingsGoals!A2:E',
     checklist: 'Checklist!A2:N',
+    documents: 'Documents!A2:J',
   }
 };

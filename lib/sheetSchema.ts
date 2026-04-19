@@ -103,6 +103,27 @@ export const initialSheetSchema: SheetSchema = {
           }
         ]
       }]
+    },
+    {
+      properties: { title: SHEETS_CONFIG.tabs.documents },
+      data: [{
+        rowData: [
+          {
+            values: [
+              { userEnteredValue: { stringValue: 'doc_id' } },
+              { userEnteredValue: { stringValue: 'religion' } },
+              { userEnteredValue: { stringValue: 'party' } },
+              { userEnteredValue: { stringValue: 'category' } },
+              { userEnteredValue: { stringValue: 'doc_name' } },
+              { userEnteredValue: { stringValue: 'is_required' } },
+              { userEnteredValue: { stringValue: 'status' } },
+              { userEnteredValue: { stringValue: 'note' } },
+              { userEnteredValue: { stringValue: 'created_at' } },
+              { userEnteredValue: { stringValue: 'updated_at' } },
+            ]
+          }
+        ]
+      }]
     }
   ]
 };

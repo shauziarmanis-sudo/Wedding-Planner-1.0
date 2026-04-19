@@ -3,25 +3,28 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "next-auth/react";
-import { Heart, Users, Wallet, LogOut, ListTodo, Store } from "lucide-react";
+import { Heart, Users, Wallet, LogOut, ListTodo, Store, FileText } from "lucide-react";
 import WeddingDashboard from "./WeddingDashboard";
 import GuestListView from "./GuestListView";
 import FinanceDashboard from "./FinanceDashboard";
 import ChecklistDashboard from "../checklist/ChecklistDashboard";
 import BudgetDashboard from "../budget/BudgetDashboard";
+import DocumentDashboard from "../documents/DocumentDashboard";
 
-type TabKey = "wedding" | "checklist" | "budget" | "guests" | "finance";
+type TabKey = "wedding" | "checklist" | "documents" | "budget" | "guests" | "finance";
 
 interface Props {
   userName: string;
   userEmail: string;
   userImage?: string;
   status: "WEDDING" | "MARRIED";
+  initialReligion: string | null;
 }
 
 const tabs = [
   { key: "wedding" as TabKey, label: "Overview", icon: Heart },
   { key: "checklist" as TabKey, label: "Checklist", icon: ListTodo },
+  { key: "documents" as TabKey, label: "Dokumen Resmi", icon: FileText },
   { key: "budget" as TabKey, label: "Vendor & Budget", icon: Store },
   { key: "guests" as TabKey, label: "Guest List", icon: Users },
   { key: "finance" as TabKey, label: "Keuangan", icon: Wallet },
@@ -33,7 +36,7 @@ const pageVariants = {
   out: { opacity: 0, y: -20 },
 };
 
-export default function DashboardClient({ userName, userEmail, userImage, status }: Props) {
+export default function DashboardClient({ userName, userEmail, userImage, status, initialReligion }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>(status === "MARRIED" ? "finance" : "wedding");
 
   return (
@@ -137,6 +140,7 @@ export default function DashboardClient({ userName, userEmail, userImage, status
           >
             {activeTab === "wedding" && <WeddingDashboard />}
             {activeTab === "checklist" && <ChecklistDashboard />}
+            {activeTab === "documents" && <DocumentDashboard initialReligion={initialReligion} />}
             {activeTab === "budget" && <BudgetDashboard />}
             {activeTab === "guests" && <GuestListView />}
             {activeTab === "finance" && <FinanceDashboard />}

@@ -143,6 +143,33 @@ export class GoogleSheetsService {
     return this.clearRange(spreadsheetId, range);
   }
 
+  async addSheet(spreadsheetId: string, title: string, headers: string[]): Promise<void> {
+    await withRateLimit(async () => {
+      try {
+        await this.sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                addSheet: {
+                  properties: { title }
+                }
+              }
+            ]
+          }
+        });
+
+        // Add headers
+        await this.appendRow(spreadsheetId, `${title}!A1:${String.fromCharCode(64 + headers.length)}1`, headers);
+      } catch (error: any) {
+        // If sheet already exists, we can ignore this error
+        if (!error.message?.includes('already exists')) {
+          throw error;
+        }
+      }
+    });
+  }
+
   /**
    * Find a row by matching a value in a specific column.
    * Returns the 1-based row index (sheet row number) or null.

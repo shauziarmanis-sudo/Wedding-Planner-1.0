@@ -44,6 +44,7 @@ export async function getMetadata(): Promise<any> {
         if (row[0] === 'adat_secondary') result.adat_secondary = row[1];
         if (row[0] === 'wedding_date') result.wedding_date = row[1];
         if (row[0] === 'guest_count_estimate') result.guest_count = row[1];
+        if (row[0] === 'religion') result.religion = row[1];
       }
 
       return result;
