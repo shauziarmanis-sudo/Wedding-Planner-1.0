@@ -1,3 +1,18 @@
+export interface AdatInfo {
+  id: string;
+  label: string;
+  region: string;
+  emoji: string;
+  color: string;
+  colorLight: string;
+  agama_default: string | null;
+  deskripsi: string;
+  prosesi_khas: string[];
+  busana_khas: string;
+  vendor_khusus: string[];
+  catatan?: string;
+}
+
 export const ADAT_REGISTRY = {
   JAWA: {
     id: 'JAWA',
@@ -176,7 +191,6 @@ export const ADAT_REGISTRY = {
     vendor_khusus: ['Wedding Organizer profesional', 'DJ / Live Band'],
     catatan: 'Pilih ini untuk fleksibilitas maksimal. Bisa tambahkan elemen dari adat lain secara a-la-carte.',
   },
-
 } as const
 
 export type AdatType = keyof typeof ADAT_REGISTRY

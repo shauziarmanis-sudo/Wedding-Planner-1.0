@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { AdatType, ADAT_REGISTRY, getAdatColor } from '@/lib/adat-registry';
+import { AdatType, ADAT_REGISTRY, getAdatColor, AdatInfo } from '@/lib/adat-registry';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
@@ -14,7 +14,7 @@ interface AdatInfoCardProps {
 
 export function AdatInfoCard({ adat, secondaryAdat }: AdatInfoCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const data = ADAT_REGISTRY[adat];
+  const data = ADAT_REGISTRY[adat] as AdatInfo;
   const colors = getAdatColor(adat);
 
   if (!data) return null;
