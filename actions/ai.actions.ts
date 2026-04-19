@@ -30,7 +30,7 @@ export async function analyzeVendors(vendors: Vendor[], userApiKey?: string): Pr
       Format output dalam Markdown. Jangan terlalu panjang, maksimal 3-4 paragraf.
     `;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -94,7 +94,7 @@ TUGAS ANDA (jawab dalam Bahasa Indonesia yang ramah dan profesional, panggil "Ka
 Format dalam Markdown yang rapi. Gunakan emoji untuk mempercantik. Maksimal 5-6 paragraf, langsung to the point.
     `;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
