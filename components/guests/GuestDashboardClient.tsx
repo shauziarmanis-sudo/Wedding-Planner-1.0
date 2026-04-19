@@ -175,7 +175,7 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-[#1A1A1A]">Daftar Tamu</h1>
+          <h1 className="font-serif text-3xl font-bold text-[#1A1A1A]">Daftar Tamu <span className="text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full align-middle ml-2">v2.0 REBUILT</span></h1>
           <p className="text-sm text-gray-500 mt-1">{stats.total_guests} tamu terdaftar</p>
         </div>
         <div className="flex items-center gap-3">
