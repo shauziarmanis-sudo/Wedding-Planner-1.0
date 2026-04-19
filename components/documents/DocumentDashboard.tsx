@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Save, Plus, Loader2, Info } from "lucide-react";
+import { Save, Plus, Loader2, Info, FileText } from "lucide-react";
 import { ChecklistDocument, DocStatus, Religion } from "@/types/document.types";
 import { getDocuments, initDocuments, batchUpdateDocumentStatus, deleteDocument } from "@/actions/document.actions";
 import ReligionSelector from "./ReligionSelector";
@@ -228,5 +228,3 @@ export default function DocumentDashboard({ initialReligion }: DocumentDashboard
   );
 }
 
-// Ensure lucide icon is imported above
-import { FileText } from "lucide-react";
