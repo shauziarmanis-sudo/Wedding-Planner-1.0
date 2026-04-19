@@ -24,19 +24,29 @@ export async function getMetadata(): Promise<any> {
     const rows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.metadata);
 
     if (rows && rows.length > 0) {
-      const row = rows[0];
-      return {
-        userId: row[0],
-        email: row[1],
-        name: row[2],
-        app_status: row[3],
-        created_at: row[4],
-        updated_at: row[5],
-        wedding_date: row[6],
-        guest_count: row[7],
-        adat_type: row[8],
-        adat_secondary: row[9],
+      const firstRow = rows[0];
+      const result: any = {
+        userId: firstRow[0],
+        email: firstRow[1],
+        name: firstRow[2],
+        app_status: firstRow[3],
+        created_at: firstRow[4],
+        updated_at: firstRow[5],
+        wedding_date: firstRow[6],
+        guest_count: firstRow[7],
+        adat_type: firstRow[8],
+        adat_secondary: firstRow[9],
       };
+
+      // Also scan all rows for key-value pairs (to support legacy append mode)
+      for (const row of rows) {
+        if (row[0] === 'adat_type') result.adat_type = row[1];
+        if (row[0] === 'adat_secondary') result.adat_secondary = row[1];
+        if (row[0] === 'wedding_date') result.wedding_date = row[1];
+        if (row[0] === 'guest_count_estimate') result.guest_count = row[1];
+      }
+
+      return result;
     }
   } catch (error) {
     console.error("Error fetching metadata:", error);
