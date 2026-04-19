@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { initChecklist } from "@/actions/checklist.actions";
 import { Loader2, ArrowRight, ArrowLeft } from "lucide-react";
-import { toast } from "react-hot-toast";
 
 interface AdatOnboardingProps {
   onComplete: () => void;

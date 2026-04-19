@@ -3,7 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useTransition } from "react";
 import { CheckCircle2, ListTodo, Search, AlertTriangle, Edit2, Check, X, Settings2 } from "lucide-react";
-import { ChecklistTask, TaskPhase, TaskAssignee, ChecklistProgress, UserProfile } from "@/types/checklist.types";
+import { ChecklistTask, TaskPhase, TaskAssignee, ChecklistProgress, UserProfile, TaskStatus } from "@/types/checklist.types";
 import { getChecklist, getChecklistProgress, renamePhase, batchUpdateTaskStatus } from "@/actions/checklist.actions";
 import { getMetadata } from "@/actions/metadata";
 import AdatOnboarding from "./AdatOnboarding";

@@ -2,9 +2,8 @@
 
 import { motion } from "framer-motion";
 import { CheckCircle2, Circle, Clock, Minus, ChevronDown, ChevronUp } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { ChecklistTask, TaskStatus } from "@/types/checklist.types";
-import { updateTaskStatus } from "@/actions/checklist.actions";
 import { AdatBadge } from "./AdatBadge";
 
 const statusConfig: Record<TaskStatus, { label: string; bg: string; text: string }> = {
@@ -65,11 +64,11 @@ export default function TaskCard({ task, localStatus, onUpdateLocalStatus }: Tas
     >
       <div className="flex items-start gap-3 p-4">
         {/* Checkbox */}
-        <button onClick={cycleStatus} disabled={isPending} className="mt-0.5 flex-shrink-0">
+        <button onClick={cycleStatus} className="mt-0.5 flex-shrink-0">
           {isCompleted ? (
             <CheckCircle2 className="w-5 h-5 text-green-500" />
           ) : (
-            <Circle className={`w-5 h-5 ${isPending ? "text-gray-300 animate-pulse" : "text-gray-300 hover:text-[#C8975A]"}`} />
+            <Circle className="w-5 h-5 text-gray-300 hover:text-[#C8975A]" />
           )}
         </button>
 

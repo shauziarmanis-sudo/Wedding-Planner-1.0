@@ -139,6 +139,10 @@ export class GoogleSheetsService {
     });
   }
 
+  async clearRow(spreadsheetId: string, range: string): Promise<void> {
+    return this.clearRange(spreadsheetId, range);
+  }
+
   /**
    * Find a row by matching a value in a specific column.
    * Returns the 1-based row index (sheet row number) or null.

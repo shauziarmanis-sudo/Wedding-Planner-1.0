@@ -601,8 +601,25 @@ export async function executeAdatSwitch(
     // Clear the existing checklist range (A2:N)
     await service.clearRange(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
 
-    // Prepare rows to append: custom tasks + new adat tasks
-    const newAdatRows = preview.data.tasks_added.map(taskToRow);
+    // Generate ALL tasks for the new adat from master data (full replacement, not delta)
+    const allNewAdatTasks = filterTasksByAdat(MASTER_CHECKLIST, new_adat, new_adat_secondary);
+    const newAdatRows = allNewAdatTasks.map((task) => [
+      `ck_${nanoid(8)}`,
+      task.phase_label,
+      task.days_before,
+      task.category,
+      task.title,
+      task.description,
+      JSON.stringify(task.adat_tags),
+      task.is_required ? "TRUE" : "FALSE",
+      "FALSE", // is_custom
+      "BELUM", // status
+      "", // completed_at
+      task.assignee,
+      "", // notes
+      "FALSE", // added_by_adat_switch
+    ]);
+
     const finalRowsToAppend = [...customTasksRows, ...newAdatRows];
 
     // Append everything back

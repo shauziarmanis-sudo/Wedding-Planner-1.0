@@ -3,7 +3,6 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { siteConfig } from "@/config/site";
 import AuthProvider from "@/components/auth/AuthProvider";
-import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif" });
@@ -23,7 +22,6 @@ export default function RootLayout({
       <body className={`${inter.variable} ${playfair.variable} font-sans`}>
         <AuthProvider>
           {children}
-          <Toaster position="bottom-right" />
         </AuthProvider>
       </body>
     </html>
