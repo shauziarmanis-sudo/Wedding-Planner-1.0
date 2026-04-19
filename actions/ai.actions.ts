@@ -1,6 +1,5 @@
 "use server";
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Vendor } from "@/types/vendor.types";
 
 export async function analyzeVendors(vendors: Vendor[], userApiKey?: string): Promise<{ success: boolean; data?: string; error?: string }> {
@@ -9,9 +8,6 @@ export async function analyzeVendors(vendors: Vendor[], userApiKey?: string): Pr
     if (!apiKey) {
       return { success: false, error: "GEMINI_API_KEY_REQUIRED" };
     }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
       Anda adalah "Wedding Consultant" profesional untuk pernikahan di Indonesia.
@@ -34,9 +30,22 @@ export async function analyzeVendors(vendors: Vendor[], userApiKey?: string): Pr
       Format output dalam Markdown. Jangan terlalu panjang, maksimal 3-4 paragraf.
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || \`Gagal menghubungi AI Server (Status: \${response.status})\`);
+    }
+
+    const result = await response.json();
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, AI tidak memberikan respons.";
 
     return { success: true, data: text };
   } catch (error: any) {
@@ -52,9 +61,6 @@ export async function analyzeWeddingPackages(vendors: Vendor[], userApiKey?: str
     if (!apiKey) {
       return { success: false, error: "GEMINI_API_KEY_REQUIRED" };
     }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
 Anda adalah "Wedding Consultant" profesional senior yang berpengalaman di industri pernikahan Indonesia.
@@ -88,9 +94,22 @@ TUGAS ANDA (jawab dalam Bahasa Indonesia yang ramah dan profesional, panggil "Ka
 Format dalam Markdown yang rapi. Gunakan emoji untuk mempercantik. Maksimal 5-6 paragraf, langsung to the point.
     `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || \`Gagal menghubungi AI Server (Status: \${response.status})\`);
+    }
+
+    const result = await response.json();
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, AI tidak memberikan respons.";
 
     return { success: true, data: text };
   } catch (error: any) {
