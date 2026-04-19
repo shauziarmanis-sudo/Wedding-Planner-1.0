@@ -44,13 +44,13 @@ export default function AdatOnboarding({ onComplete }: AdatOnboardingProps) {
       });
 
       if (res.success) {
-        toast.success("Checklist berhasil dibuat!");
+        alert("Checklist berhasil dibuat!");
         onComplete();
       } else {
-        toast.error(res.error || "Gagal membuat checklist");
+        alert(res.error || "Gagal membuat checklist");
       }
     } catch (e: any) {
-      toast.error(e.message || "Terjadi kesalahan");
+      alert(e.message || "Terjadi kesalahan");
     } finally {
       setLoading(false);
     }
