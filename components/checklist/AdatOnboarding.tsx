@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ADAT_REGISTRY, ADAT_TYPES, AdatType, getAdatColor } from "@/lib/adat-registry";

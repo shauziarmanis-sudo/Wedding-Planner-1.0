@@ -1,3 +1,5 @@
+"use client";
+
 import React from 'react';
 import { AdatType, ADAT_REGISTRY, getAdatColor } from '@/lib/adat-registry';
 import { Badge } from '@/components/ui/badge';

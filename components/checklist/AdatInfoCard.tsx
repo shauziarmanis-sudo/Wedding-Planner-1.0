@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from 'react';
 import { AdatType, ADAT_REGISTRY, getAdatColor } from '@/lib/adat-registry';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
