@@ -130,7 +130,7 @@ export class GoogleSheetsService {
     });
   }
 
-  async clearRow(spreadsheetId: string, range: string): Promise<void> {
+  async clearRange(spreadsheetId: string, range: string): Promise<void> {
     await withRateLimit(async () => {
       await this.sheets.spreadsheets.values.clear({
         spreadsheetId,

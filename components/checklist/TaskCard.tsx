@@ -30,31 +30,27 @@ const categoryEmoji: Record<string, string> = {
 
 interface TaskCardProps {
   task: ChecklistTask;
-  onStatusChange: () => void;
+  localStatus?: TaskStatus;
+  onUpdateLocalStatus: (taskId: string, status: TaskStatus) => void;
 }
 
-export default function TaskCard({ task, onStatusChange }: TaskCardProps) {
+export default function TaskCard({ task, localStatus, onUpdateLocalStatus }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const isCompleted = task.status === "SELESAI";
-  const isSkipped = task.status === "SKIP";
+  
+  const effectiveStatus = localStatus || task.status;
+  const isCompleted = effectiveStatus === "SELESAI";
+  const isSkipped = effectiveStatus === "SKIP";
 
   function cycleStatus() {
-    const next: TaskStatus = task.status === "BELUM" ? "SELESAI" : task.status === "SELESAI" ? "BELUM" : "SELESAI";
-    startTransition(async () => {
-      await updateTaskStatus({ task_id: task.task_id, status: next });
-      onStatusChange();
-    });
+    const next: TaskStatus = effectiveStatus === "BELUM" ? "SELESAI" : effectiveStatus === "SELESAI" ? "BELUM" : "SELESAI";
+    onUpdateLocalStatus(task.task_id, next);
   }
 
   function setStatus(status: TaskStatus) {
-    startTransition(async () => {
-      await updateTaskStatus({ task_id: task.task_id, status });
-      onStatusChange();
-    });
+    onUpdateLocalStatus(task.task_id, status);
   }
 
-  const cfg = statusConfig[task.status] || statusConfig["BELUM"];
+  const cfg = statusConfig[effectiveStatus] || statusConfig["BELUM"];
 
   return (
     <motion.div
@@ -113,9 +109,9 @@ export default function TaskCard({ task, onStatusChange }: TaskCardProps) {
               {task.completed_at && <p className="text-[10px] text-green-600">✓ Selesai: {new Date(task.completed_at).toLocaleDateString("id-ID")}</p>}
               <div className="flex gap-1.5">
                 {(["BELUM", "PROSES", "SELESAI", "SKIP"] as TaskStatus[]).map((s) => (
-                  <button key={s} onClick={() => setStatus(s)} disabled={isPending}
+                  <button key={s} onClick={() => setStatus(s)}
                     className={`text-[10px] px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                      task.status === s ? `${statusConfig[s].bg} ${statusConfig[s].text} ring-1 ring-current` : "bg-gray-50 text-gray-400 hover:bg-gray-100"
+                      effectiveStatus === s ? `${statusConfig[s].bg} ${statusConfig[s].text} ring-1 ring-current` : "bg-gray-50 text-gray-400 hover:bg-gray-100"
                     }`}
                   >{statusConfig[s].label}</button>
                 ))}

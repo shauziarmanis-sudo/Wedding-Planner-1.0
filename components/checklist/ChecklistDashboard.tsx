@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useTransition } from "react";
 import { CheckCircle2, ListTodo, Search, AlertTriangle, Edit2, Check, X, Settings2 } from "lucide-react";
 import { ChecklistTask, TaskPhase, TaskAssignee, ChecklistProgress, UserProfile } from "@/types/checklist.types";
-import { getChecklist, getChecklistProgress, renamePhase } from "@/actions/checklist.actions";
+import { getChecklist, getChecklistProgress, renamePhase, batchUpdateTaskStatus } from "@/actions/checklist.actions";
 import { getMetadata } from "@/actions/metadata";
 import AdatOnboarding from "./AdatOnboarding";
 import { AdatSwitcherModal } from "./AdatSwitcherModal";
@@ -35,6 +35,10 @@ export default function ChecklistDashboard() {
   const [editingPhase, setEditingPhase] = useState<TaskPhase | null>(null);
   const [newPhaseName, setNewPhaseName] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  // Local state for batch saving
+  const [pendingUpdates, setPendingUpdates] = useState<Record<string, TaskStatus>>({});
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -79,6 +83,29 @@ export default function ChecklistDashboard() {
     });
   }
 
+  function handleUpdateLocalStatus(taskId: string, status: TaskStatus) {
+    setPendingUpdates((prev) => {
+      const next = { ...prev };
+      if (tasks.find(t => t.task_id === taskId)?.status === status) {
+        delete next[taskId];
+      } else {
+        next[taskId] = status;
+      }
+      return next;
+    });
+  }
+
+  async function handleBatchSave() {
+    setIsSaving(true);
+    const updates = Object.entries(pendingUpdates).map(([task_id, status]) => ({ task_id, status }));
+    const res = await batchUpdateTaskStatus(updates);
+    if (res.success) {
+      setPendingUpdates({});
+      await loadData();
+    }
+    setIsSaving(false);
+  }
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 opacity-50">
@@ -92,13 +119,24 @@ export default function ChecklistDashboard() {
     return <AdatOnboarding onComplete={loadData} />;
   }
 
-  const filteredTasks = tasks
+  const localTasks = tasks.map(t => ({ ...t, status: pendingUpdates[t.task_id] || t.status }));
+
+  const filteredTasks = localTasks
     .filter((t) => t.phase_label === activePhase)
     .filter((t) => activeAssignee === "SEMUA" || t.assignee === activeAssignee);
 
-  const totalCompleted = tasks.filter((t) => t.status === "SELESAI" || t.status === "SKIP").length;
-  const totalTasks = tasks.length;
+  const totalCompleted = localTasks.filter((t) => t.status === "SELESAI" || t.status === "SKIP").length;
+  const totalTasks = localTasks.length;
   const overallPercentage = totalTasks > 0 ? Math.round((totalCompleted / totalTasks) * 100) : 0;
+
+  const localProgress = progress.map(p => {
+    const phaseTasks = localTasks.filter(t => t.phase_label === p.phase);
+    const completed = phaseTasks.filter(t => t.status === "SELESAI" || t.status === "SKIP").length;
+    const percentage = phaseTasks.length > 0 ? Math.round((completed / phaseTasks.length) * 100) : 0;
+    return { ...p, completed, percentage };
+  });
+
+  const hasPendingUpdates = Object.keys(pendingUpdates).length > 0;
 
   return (
     <div className="space-y-8">
@@ -131,7 +169,7 @@ export default function ChecklistDashboard() {
         <div className="flex-1 w-full">
           <h2 className="text-2xl font-serif font-bold text-[#1A1A1A] mb-4">Progress Persiapan</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {progress.map((p) => (
+            {localProgress.map((p) => (
               <div
                 key={p.phase}
                 onClick={() => {
@@ -217,12 +255,42 @@ export default function ChecklistDashboard() {
               </motion.div>
             ) : (
               filteredTasks.map((task) => (
-                <TaskCard key={task.task_id} task={task} onStatusChange={loadData} />
+                <TaskCard 
+                  key={task.task_id} 
+                  task={task} 
+                  localStatus={pendingUpdates[task.task_id]}
+                  onUpdateLocalStatus={handleUpdateLocalStatus}
+                />
               ))
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* ── Sticky Save Button ── */}
+      <AnimatePresence>
+        {hasPendingUpdates && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4"
+          >
+            <div className="bg-white rounded-full shadow-xl border border-gray-200 p-2 pr-4 pl-6 flex items-center gap-4 max-w-sm w-full mx-auto justify-between">
+              <span className="text-sm font-medium text-gray-700">
+                {Object.keys(pendingUpdates).length} perubahan belum disimpan
+              </span>
+              <Button 
+                onClick={handleBatchSave} 
+                disabled={isSaving}
+                className="rounded-full px-6"
+              >
+                {isSaving ? "Menyimpan..." : "Simpan Checklist"}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

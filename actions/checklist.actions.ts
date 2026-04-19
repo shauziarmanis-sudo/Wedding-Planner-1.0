@@ -307,6 +307,64 @@ export async function updateTaskStatus(
   }
 }
 
+export async function batchUpdateTaskStatus(
+  updates: { task_id: string; status: TaskStatus; notes?: string }[]
+): Promise<{ success: boolean; error?: string }> {
+  const session = await getSessionData();
+  if (!session?.accessToken || !session?.spreadsheetId) return { success: false, error: "Unauthorized" };
+  if (updates.length === 0) return { success: true };
+
+  try {
+    const service = new GoogleSheetsService(session.accessToken);
+    const allRows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
+    if (!allRows) return { success: false, error: "Task data not found" };
+
+    const batchUpdates: { range: string; values: string[][] }[] = [];
+    const updateMap = new Map(updates.map(u => [u.task_id, u]));
+
+    for (let i = 0; i < allRows.length; i++) {
+      const rowId = allRows[i][0];
+      if (updateMap.has(rowId)) {
+        const update = updateMap.get(rowId)!;
+        const rowIndex = i + 2; // +1 for header, +1 for 1-based index
+        const completedAt = update.status === "SELESAI" ? new Date().toISOString() : "";
+        
+        batchUpdates.push({
+          range: `Checklist!J${rowIndex}`,
+          values: [[update.status]]
+        });
+        batchUpdates.push({
+          range: `Checklist!K${rowIndex}`,
+          values: [[completedAt]]
+        });
+        if (update.notes !== undefined) {
+          batchUpdates.push({
+            range: `Checklist!M${rowIndex}`,
+            values: [[update.notes]]
+          });
+        }
+      }
+    }
+
+    if (batchUpdates.length > 0) {
+      await withRateLimit(async () => {
+        await service['sheets'].spreadsheets.values.batchUpdate({
+          spreadsheetId: session.spreadsheetId,
+          requestBody: {
+            valueInputOption: 'USER_ENTERED',
+            data: batchUpdates,
+          },
+        });
+      });
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return { success: false, error: msg };
+  }
+}
+
 export async function renamePhase(oldPhase: string, newPhase: string): Promise<{ success: boolean; error?: string }> {
   const session = await getSessionData();
   if (!session?.accessToken || !session?.spreadsheetId) return { success: false, error: "Unauthorized" };
@@ -492,12 +550,11 @@ export async function previewAdatSwitch(
       }) as ChecklistTask);
 
     // 3. Generate Warnings
-    const conflict_warnings: string[] = [];
-    const inProgressRemoved = tasks_removed.filter(t => t.status === 'PROSES');
-    if (inProgressRemoved.length > 0) {
-      conflict_warnings.push(`Terdapat ${inProgressRemoved.length} task yang sedang dalam status PROSES namun akan dinonaktifkan.`);
-    }
-
+    const conflict_warnings: string[] = [
+      "Perhatian: Proses ganti adat akan menghapus semua tugas standar saat ini dan menggantinya dengan yang baru.",
+      "Tugas Custom (buatan Anda sendiri) akan tetap dipertahankan.",
+      "Progress (tugas yang sudah selesai) dari tugas bawaan akan di-reset menjadi 0%."
+    ];
     if (new_adat === 'BATAK') {
       conflict_warnings.push("Pernikahan adat Batak membutuhkan koordinasi keluarga besar. Pastikan untuk merencanakan Martonggo Raja sejak awal.");
     }
@@ -538,38 +595,19 @@ export async function executeAdatSwitch(
     const allRows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
     if (!allRows) throw new Error("Could not read checklist data");
 
-    const updates: { range: string; values: string[][] }[] = [];
+    // We will COMPLETELY replace the checklist. Keep only custom tasks.
+    const customTasksRows = allRows.filter(row => row[8] === "TRUE"); // is_custom is col 8 (I)
     
-    // 1. Set removed tasks to 'SKIP'
-    const removedIds = new Set(preview.data.tasks_removed.map(t => t.task_id));
-    for (let i = 0; i < allRows.length; i++) {
-      const rowId = allRows[i][0];
-      if (removedIds.has(rowId)) {
-        allRows[i][9] = 'SKIP'; // status
-        updates.push({
-          range: `Checklist!J${i + 2}`, // 1-based + 1 for header
-          values: [['SKIP']]
-        });
-      }
-    }
+    // Clear the existing checklist range (A2:N)
+    await service.clearRange(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
 
-    // 2. Batch update statuses
-    if (updates.length > 0) {
-      await withRateLimit(async () => {
-        await service['sheets'].spreadsheets.values.batchUpdate({
-          spreadsheetId: session.spreadsheetId,
-          requestBody: {
-            valueInputOption: 'USER_ENTERED',
-            data: updates,
-          },
-        });
-      });
-    }
+    // Prepare rows to append: custom tasks + new adat tasks
+    const newAdatRows = preview.data.tasks_added.map(taskToRow);
+    const finalRowsToAppend = [...customTasksRows, ...newAdatRows];
 
-    // 3. Append new tasks
-    if (preview.data.tasks_added.length > 0) {
-      const rowsToAppend = preview.data.tasks_added.map(taskToRow);
-      await service.appendRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, rowsToAppend);
+    // Append everything back
+    if (finalRowsToAppend.length > 0) {
+      await service.appendRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, finalRowsToAppend);
     }
 
     // 4. Update Metadata
