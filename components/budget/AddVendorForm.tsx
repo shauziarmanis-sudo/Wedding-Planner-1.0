@@ -87,9 +87,9 @@ export default function AddVendorForm({ onClose, onSuccess }: Props) {
   const inputCls = "w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#C8975A]/30 text-sm";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-        onClick={e => e.stopPropagation()} className={`bg-white rounded-3xl shadow-2xl w-full p-6 my-8 ${isPaket ? "max-w-3xl" : "max-w-2xl"}`}>
+        onClick={e => e.stopPropagation()} className={`bg-white rounded-3xl shadow-2xl w-full p-6 max-h-[90vh] overflow-y-auto ${isPaket ? "max-w-3xl" : "max-w-2xl"}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="font-serif text-xl font-bold text-[#1A1A1A] flex items-center gap-2">
