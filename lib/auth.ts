@@ -78,7 +78,6 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       session.spreadsheetId = token.spreadsheetId as string;
-      session.error = token.error as string;
       return session;
     }
   },
