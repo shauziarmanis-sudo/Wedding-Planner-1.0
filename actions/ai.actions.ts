@@ -11,7 +11,7 @@ export async function analyzeVendors(vendors: Vendor[], userApiKey?: string): Pr
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
       Anda adalah "Wedding Consultant" profesional untuk pernikahan di Indonesia.
@@ -54,7 +54,7 @@ export async function analyzeWeddingPackages(vendors: Vendor[], userApiKey?: str
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
     const prompt = `
 Anda adalah "Wedding Consultant" profesional senior yang berpengalaman di industri pernikahan Indonesia.
