@@ -73,7 +73,7 @@ export default function ChecklistDashboard() {
       await renamePhase(oldPhase, newPhaseName.trim());
       setEditingPhase(null);
       if (activePhase === oldPhase) {
-        setActivePhase(newPhaseName.trim());
+        setActivePhase(newPhaseName.trim() as TaskPhase);
       }
       await loadData();
     });
@@ -89,7 +89,7 @@ export default function ChecklistDashboard() {
   }
 
   if (needsOnboarding) {
-    return <ChecklistOnboarding onComplete={loadData} />;
+    return <AdatOnboarding onComplete={loadData} />;
   }
 
   const filteredTasks = tasks
