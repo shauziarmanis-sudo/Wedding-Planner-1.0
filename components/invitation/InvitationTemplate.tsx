@@ -19,6 +19,7 @@ export interface WeddingInfo {
 interface GuestInfo {
   name: string;
   pax: number;
+  rsvp_token?: string;
 }
 
 const fadeUp = {
