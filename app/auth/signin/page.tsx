@@ -1,18 +1,30 @@
 "use client";
 
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { Loader2 } from 'lucide-react'
 
 export default function SignIn() {
   const supabase = createClient()
 
+  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
   async function handleGoogleLogin() {
-    await supabase.auth.signInWithOAuth({
+    setLoading(true)
+    setErrorMsg(null)
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
         scopes: 'openid email profile',
       }
     })
+    
+    if (error) {
+      setErrorMsg(error.message)
+      setLoading(false)
+    }
   }
 
   return (
@@ -29,10 +41,14 @@ export default function SignIn() {
         <div className="mt-8 space-y-6">
           <button
             onClick={handleGoogleLogin}
-            className="group relative flex w-full justify-center rounded-md border border-transparent bg-cta py-3 px-4 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2"
+            disabled={loading}
+            className="group relative flex w-full justify-center rounded-md border border-transparent bg-cta py-3 px-4 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Lanjutkan dengan Google
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Lanjutkan dengan Google'}
           </button>
+          {errorMsg && (
+            <p className="text-sm text-red-500 text-center">{errorMsg}</p>
+          )}
           <p className="text-xs text-center text-body/60">
             Data Anda akan disimpan dengan aman di Supabase.
           </p>

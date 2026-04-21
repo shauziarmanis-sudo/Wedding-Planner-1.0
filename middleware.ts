@@ -9,10 +9,17 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll(cookiesToSet: any) {
-          cookiesToSet.forEach((cookie: any) =>
-            supabaseResponse.cookies.set(cookie.name, cookie.value, cookie.options)
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          // Step 1: update request cookies
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          // Step 2: recreate response with updated request
+          supabaseResponse = NextResponse.next({ request })
+          // Step 3: set cookies on response
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
           )
         },
       },
@@ -21,12 +28,19 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Redirect ke /auth/signin jika belum login dan akses /dashboard atau /wedding
-  if (!user && (
-    request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/wedding')
-  )) {
-    return NextResponse.redirect(new URL('/auth/signin', request.url))
+  if (
+    !user &&
+    (request.nextUrl.pathname.startsWith('/dashboard') ||
+      request.nextUrl.pathname.startsWith('/wedding'))
+  ) {
+    // Carry all session cookies into the redirect response
+    const redirectResponse = NextResponse.redirect(
+      new URL('/auth/signin', request.url)
+    )
+    supabaseResponse.cookies.getAll().forEach(cookie =>
+      redirectResponse.cookies.set(cookie.name, cookie.value, cookie)
+    )
+    return redirectResponse
   }
 
   return supabaseResponse
