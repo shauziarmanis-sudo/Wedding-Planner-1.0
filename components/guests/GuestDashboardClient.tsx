@@ -22,7 +22,6 @@ import toast from "react-hot-toast";
 interface Props {
   initialGuests: Guest[];
   initialStats: GuestStats;
-  token: string;
   metadata: any;
 }
 
@@ -58,7 +57,7 @@ const RSVP_LABEL: Record<string, string> = {
   BELUM_KONFIRMASI: 'Belum',
 };
 
-export default function GuestDashboardClient({ initialGuests, initialStats, token, metadata }: Props) {
+export default function GuestDashboardClient({ initialGuests, initialStats, metadata }: Props) {
   const [guests, setGuests] = useState<Guest[]>(initialGuests);
   const [stats, setStats] = useState<GuestStats>(initialStats);
   const [search, setSearch] = useState("");
@@ -115,15 +114,15 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
     }
   };
 
-  const copyLink = (id: string) => {
-    const link = `${window.location.origin}/invitation/${id}?t=${token}`;
+  const copyLink = (guest: Guest) => {
+    const link = `${window.location.origin}/invitation/${guest.rsvp_token || guest.guest_id}`;
     navigator.clipboard.writeText(link);
     toast.success("Link undangan berhasil disalin!");
     setOpenActionMenu(null);
   };
 
   const openWA = async (guest: Guest) => {
-    const link = `${window.location.origin}/invitation/${guest.guest_id}?t=${token}`;
+    const link = `${window.location.origin}/invitation/${guest.rsvp_token || guest.guest_id}`;
     const text = generateWABlastText(metadata, guest, link);
     window.open(`https://wa.me/${guest.phone_wa}?text=${encodeURIComponent(text)}`, '_blank');
     await markBulkInvitationSent([guest.guest_id]);
@@ -413,7 +412,7 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
                             exit={{ opacity: 0, scale: 0.95 }}
                             className="absolute right-0 mt-1 w-52 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-20"
                           >
-                            <button onClick={() => copyLink(guest.guest_id)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
+                            <button onClick={() => copyLink(guest)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
                               <Copy className="w-4 h-4 text-gray-400" /> Salin Link Undangan
                             </button>
                             <button onClick={() => openWA(guest)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
@@ -457,7 +456,6 @@ export default function GuestDashboardClient({ initialGuests, initialStats, toke
       <BulkSendModal
         isOpen={showBulkSendModal}
         guests={guests}
-        token={token}
         metadata={metadata}
         onClose={() => setShowBulkSendModal(false)}
         onComplete={handleBulkSendComplete}

@@ -39,6 +39,12 @@ const pageVariants = {
 export default function DashboardClient({ userName, userEmail, userImage, status, initialReligion }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>(status === "MARRIED" ? "finance" : "wedding");
 
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
+
   return (
     <div className="min-h-screen bg-[#FFF8E1] flex flex-col md:flex-row">
       {/* ── Mobile Header ── */}
@@ -59,7 +65,7 @@ export default function DashboardClient({ userName, userEmail, userImage, status
                 </div>
               )}
               <button
-                onClick={() => signOut({ callbackUrl: "/" })}
+                onClick={handleSignOut}
                 className="p-1.5 rounded-lg text-[#212121]/40 hover:text-[#C2185B] transition-colors"
               >
                 <LogOut className="w-4 h-4" />
@@ -141,7 +147,7 @@ export default function DashboardClient({ userName, userEmail, userImage, status
               <p className="text-xs text-[#212121]/50 truncate">{userEmail}</p>
             </div>
             <button
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={handleSignOut}
               className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
               title="Sign Out"
             >

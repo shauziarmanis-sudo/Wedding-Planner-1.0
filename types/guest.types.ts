@@ -4,6 +4,7 @@ export type GiftType = 'CASH' | 'TRANSFER' | 'BARANG' | 'TIDAK_ADA';
 
 export interface Guest {
   guest_id: string;
+  rsvp_token?: string;
   name: string;
   category: GuestCategory;
   phone_wa: string;

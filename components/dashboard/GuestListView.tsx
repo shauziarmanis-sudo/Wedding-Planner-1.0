@@ -48,15 +48,10 @@ export default function GuestListView() {
     );
   }
 
-  // Create token for invitation links
-  const spreadsheetId = (session as any)?.spreadsheetId || "";
-  const token = typeof window !== 'undefined' ? window.btoa(spreadsheetId) : "";
-
   return (
     <GuestDashboardClient 
       initialGuests={guests}
       initialStats={stats}
-      token={token}
       metadata={metadata}
     />
   );

@@ -19,7 +19,6 @@ export default async function Home() {
         <p className="text-xl text-body max-w-[600px] text-center">
           Platform pasangan dari Wedding Planning otomatis berubah menjadi Household Financial Dashboard.
         </p>
-        <LandingNav user={user ? { ...user, name: user.user_metadata?.full_name } : null} />
         <div className="flex gap-4">
           <Link 
             href="/auth/signin" 

@@ -12,7 +12,6 @@ import SendProgressModal from "./SendProgressModal";
 interface Props {
   isOpen: boolean;
   guests: Guest[];
-  token: string;
   metadata: any;
   onClose: () => void;
   onComplete: (sentIds: string[], skippedIds: string[]) => void;
@@ -52,7 +51,7 @@ const WA_TEMPLATES: WATemplate[] = [
   },
 ];
 
-export default function BulkSendModal({ isOpen, guests, token, metadata, onClose, onComplete }: Props) {
+export default function BulkSendModal({ isOpen, guests, metadata, onClose, onComplete }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [campaignName, setCampaignName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<GuestCategory | 'ALL'>('ALL');
@@ -83,7 +82,7 @@ export default function BulkSendModal({ isOpen, guests, token, metadata, onClose
   const previewMessage = targetGuests.length > 0
     ? selectedTemplate.preview(
         targetGuests[0].name,
-        `${typeof window !== 'undefined' ? window.location.origin : ''}/invitation/${targetGuests[0].guest_id}?t=${token}`,
+        `${typeof window !== 'undefined' ? window.location.origin : ''}/invitation/${targetGuests[0].rsvp_token || targetGuests[0].guest_id}`,
         metadata
       )
     : selectedTemplate.preview('Nama Tamu', 'https://link-undangan.com', metadata);
@@ -238,7 +237,6 @@ export default function BulkSendModal({ isOpen, guests, token, metadata, onClose
       <SendProgressModal
         isOpen={isOpen && step === 2}
         guests={targetGuests}
-        token={token}
         metadata={metadata}
         template={selectedTemplate}
         onComplete={handleSendComplete}

@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 interface Props {
   isOpen: boolean;
   guests: Guest[];
-  token: string;
   metadata: any;
   template: WATemplate;
   onComplete: (sentIds: string[], skippedIds: string[]) => void;
@@ -24,7 +23,7 @@ interface HistoryItem {
   time: string;
 }
 
-export default function SendProgressModal({ isOpen, guests, token, metadata, template, onComplete, onClose }: Props) {
+export default function SendProgressModal({ isOpen, guests, metadata, template, onComplete, onClose }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sentIds, setSentIds] = useState<string[]>([]);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
@@ -45,13 +44,13 @@ export default function SendProgressModal({ isOpen, guests, token, metadata, tem
   const isFinished = currentIndex >= total;
   const currentGuest = guests[currentIndex];
 
-  const getInvitationLink = (guestId: string) => {
-    return `${typeof window !== 'undefined' ? window.location.origin : ''}/invitation/${guestId}?t=${token}`;
+  const getInvitationLink = (guest: Guest) => {
+    return `${typeof window !== 'undefined' ? window.location.origin : ''}/invitation/${guest.rsvp_token || guest.guest_id}`;
   };
 
   const handleSend = async () => {
     if (!currentGuest) return;
-    const link = getInvitationLink(currentGuest.guest_id);
+    const link = getInvitationLink(currentGuest);
     const message = template.preview(currentGuest.name, link, metadata);
     const phone = currentGuest.phone_wa || '';
     
@@ -175,7 +174,7 @@ export default function SendProgressModal({ isOpen, guests, token, metadata, tem
                       {/* Preview Message */}
                       <div className="max-h-[200px] overflow-y-auto">
                         <div className="bg-white rounded-xl p-4 border border-gray-100 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                          {template.preview(currentGuest.name, getInvitationLink(currentGuest.guest_id), metadata)}
+                          {template.preview(currentGuest.name, getInvitationLink(currentGuest), metadata)}
                         </div>
                       </div>
 
