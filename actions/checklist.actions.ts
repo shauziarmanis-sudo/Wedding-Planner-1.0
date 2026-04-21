@@ -149,7 +149,7 @@ export async function getChecklist(
       is_custom: t.source === 'CUSTOM',
       added_by_adat_switch: false // Legacy flag, no longer heavily used if we just rebuild the list
     }, profile?.wedding_date)) as ChecklistTask[];
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching checklist:", error);
     return [];
   }
@@ -276,7 +276,7 @@ export async function getChecklistProgress(): Promise<{
       by_assignee,
       critical_overdue
     };
-  } catch (error) {
+  } catch (error: any) {
     return { overall: {total:0, completed:0, percentage:0}, by_phase: [], by_assignee: {}, critical_overdue: [] };
   }
 }

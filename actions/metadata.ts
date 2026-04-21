@@ -24,7 +24,7 @@ export async function getMetadata(): Promise<any> {
     if (error || !data) return {};
 
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching metadata:", error);
     return {};
   }
@@ -43,7 +43,7 @@ export async function getMetadataPublic(userId: string): Promise<any> {
     if (error || !data) return {};
     
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching public metadata:", error);
     return {};
   }

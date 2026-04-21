@@ -12,14 +12,14 @@ export async function POST(req: Request) {
       .from('guests')
       .select('gift_amount')
       .eq('user_id', user.id)
-    const totalGifts = guests?.reduce((sum, g) => sum + Number(g.gift_amount || 0), 0) ?? 0
+    const totalGifts = guests?.reduce((sum: number, g: any) => sum + Number(g.gift_amount || 0), 0) ?? 0
 
     // Hitung total unpaid dari tabel vendors
     const { data: vendors } = await supabase
       .from('vendors')
       .select('actual_cost, estimated_cost, paid_amount')
       .eq('user_id', user.id)
-    const totalUnpaid = vendors?.reduce((sum, v) => {
+    const totalUnpaid = vendors?.reduce((sum: number, v: any) => {
       const total = Number(v.actual_cost) > 0 ? Number(v.actual_cost) : Number(v.estimated_cost || 0)
       return sum + Math.max(0, total - Number(v.paid_amount || 0))
     }, 0) ?? 0

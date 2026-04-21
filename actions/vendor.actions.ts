@@ -52,7 +52,7 @@ export async function getBudgetSummary(): Promise<BudgetSummary> {
 
   const catMap = new Map<string, { total: number; paid: number }>();
 
-  vendors.forEach((v) => {
+  vendors.forEach((v: any) => {
     total_estimated += Number(v.estimated_cost || 0);
     const cost = v.actual_cost > 0 ? Number(v.actual_cost) : Number(v.estimated_cost || 0);
     total_actual += cost;
@@ -77,7 +77,7 @@ export async function getBudgetSummary(): Promise<BudgetSummary> {
     vendors_lunas,
     vendors_belum,
     budget_variance: total_actual - total_estimated,
-    by_category: Array.from(catMap.entries()).map(([cat, data]) => ({
+    by_category: Array.from(catMap.entries()).map(([cat, data]: any) => ({
       category: cat as Vendor["category"],
       ...data,
     })),

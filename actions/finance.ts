@@ -16,7 +16,7 @@ export async function getTransactions(): Promise<Transaction[]> {
       
     if (error) throw error;
     return data as Transaction[];
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to get transactions:", error);
     return [];
   }
@@ -77,7 +77,7 @@ export async function getSavingGoals(): Promise<SavingGoal[]> {
       
     if (error) throw error;
     return data as SavingGoal[];
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to get saving goals:", error);
     return [];
   }
@@ -177,7 +177,7 @@ export async function getMonthlyChartData(): Promise<{ bulan: string; Pemasukan:
       bulan,
       ...data
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to get chart data:", error);
     return [];
   }

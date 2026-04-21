@@ -140,12 +140,12 @@ export async function getGuestStats(): Promise<GuestStats> {
   
   const stats: GuestStats = {
     total_guests: guests.length,
-    total_pax_estimate: guests.reduce((sum, g) => sum + (g.pax_estimate || 0), 0),
+    total_pax_estimate: guests.reduce((sum: number, g: any) => sum + (g.pax_estimate || 0), 0),
     rsvp_hadir: guests.filter(g => g.rsvp_status === 'HADIR').length,
     rsvp_tidak_hadir: guests.filter(g => g.rsvp_status === 'TIDAK_HADIR').length,
     rsvp_belum: guests.filter(g => g.rsvp_status === 'BELUM_KONFIRMASI').length,
-    total_pax_confirmed: guests.reduce((sum, g) => sum + (g.actual_pax || 0), 0),
-    total_gifts: guests.reduce((sum, g) => sum + (g.gift_amount || 0), 0),
+    total_pax_confirmed: guests.reduce((sum: number, g: any) => sum + (g.actual_pax || 0), 0),
+    total_gifts: guests.reduce((sum: number, g: any) => sum + (g.gift_amount || 0), 0),
     invitation_sent_count: guests.filter(g => g.invitation_sent).length,
     by_category: []
   };
@@ -154,7 +154,7 @@ export async function getGuestStats(): Promise<GuestStats> {
   stats.by_category = categories.map(cat => ({
     category: cat,
     count: guests.filter(g => g.category === cat).length,
-    confirmed_pax: guests.filter(g => g.category === cat).reduce((sum, g) => sum + (g.actual_pax || 0), 0)
+    confirmed_pax: guests.filter(g => g.category === cat).reduce((sum: number, g: any) => sum + (g.actual_pax || 0), 0)
   }));
 
   return stats;
