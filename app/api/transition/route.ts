@@ -1,79 +1,49 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { GoogleSheetsService } from '@/lib/googleService';
-import { SHEETS_CONFIG } from '@/config/sheets';
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.accessToken || !session.spreadsheetId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = await createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const service = new GoogleSheetsService(session.accessToken as string);
-    const spreadsheetId = session.spreadsheetId as string;
+    // Hitung total gifts dari tabel guests
+    const { data: guests } = await supabase
+      .from('guests')
+      .select('gift_amount')
+      .eq('user_id', user.id)
+    const totalGifts = guests?.reduce((sum, g) => sum + Number(g.gift_amount || 0), 0) ?? 0
 
-    // 1. Audit Gifts (Income)
-    const giftsData = await service.readRows(spreadsheetId, SHEETS_CONFIG.ranges.gifts);
-    let totalGifts = 0;
-    if (giftsData && giftsData.length > 0) {
-      // Assuming structure: [ID, GuestName, Amount, Notes, Date]
-      totalGifts = giftsData.reduce((sum, row) => sum + (parseFloat(row[2]) || 0), 0);
-    }
+    // Hitung total unpaid dari tabel vendors
+    const { data: vendors } = await supabase
+      .from('vendors')
+      .select('actual_cost, estimated_cost, paid_amount')
+      .eq('user_id', user.id)
+    const totalUnpaid = vendors?.reduce((sum, v) => {
+      const total = Number(v.actual_cost) > 0 ? Number(v.actual_cost) : Number(v.estimated_cost || 0)
+      return sum + Math.max(0, total - Number(v.paid_amount || 0))
+    }, 0) ?? 0
 
-    // 2. Audit Vendors (Expenses)
-    const vendorsData = await service.readRows(spreadsheetId, SHEETS_CONFIG.ranges.budget);
-    let totalUnpaid = 0;
-    if (vendorsData && vendorsData.length > 0) {
-      // Assuming structure: vendor_id (0), ..., estimated_cost (6), actual_cost (7), ..., paid_amount (10)
-      totalUnpaid = vendorsData.reduce((sum, row) => {
-        const totalCost = parseFloat(row[7]) || parseFloat(row[6]) || 0;
-        const paidAmount = parseFloat(row[10]) || 0;
-        return sum + Math.max(0, totalCost - paidAmount);
-      }, 0);
-    }
+    const initialBalance = totalGifts - totalUnpaid
 
-    // 3. Calculate Net Balance
-    const initialBalance = totalGifts - totalUnpaid;
+    // Update status wedding profile ke MARRIED
+    await supabase
+      .from('wedding_profiles')
+      .update({ app_status: 'MARRIED', updated_at: new Date().toISOString() })
+      .eq('user_id', user.id)
 
-    // 4. Update Metadata Status to MARRIED (cari row yang benar)
-    const metaRows = await service.readRows(spreadsheetId, 'Metadata!A2:B');
-    if (metaRows) {
-      for (let i = 0; i < metaRows.length; i++) {
-        if (metaRows[i][0] === 'status') {
-          await service.updateRow(spreadsheetId, `Metadata!B${i + 2}`, ['MARRIED']);
-          break;
-        }
-      }
-      // Jika key 'status' belum ada, append
-      const hasStatus = metaRows.some(r => r[0] === 'status');
-      if (!hasStatus) {
-        await service.appendRow(spreadsheetId, 'Metadata!A:B', ['status', 'MARRIED']);
-      }
-    }
+    // Insert initial transaction
+    await supabase.from('transactions').insert({
+      user_id: user.id,
+      tx_id: `tx-${Date.now()}`,
+      amount: initialBalance,
+      description: 'Initial Balance (Wedding)',
+      type: initialBalance >= 0 ? 'INCOME' : 'EXPENSE',
+      notes: `Auto-calculated. Gifts: ${totalGifts}, Unpaid: ${totalUnpaid}`,
+    })
 
-    // 5. Create Initial Transaction in Finance Sheet
-    const now = new Date().toISOString();
-    const txId = `tx-${Date.now()}`;
-    await service.appendRow(spreadsheetId, SHEETS_CONFIG.ranges.transactions, [
-      txId,
-      now,
-      initialBalance,
-      'Initial Balance (Wedding)',
-      initialBalance >= 0 ? 'INCOME' : 'EXPENSE',
-      `Auto-calculated during transition. Gifts: ${totalGifts}, Unpaid: ${totalUnpaid}`
-    ]);
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Transitioned to Married Mode',
-      details: { totalGifts, totalUnpaid, initialBalance }
-    });
-
+    return NextResponse.json({ success: true, details: { totalGifts, totalUnpaid, initialBalance } })
   } catch (error: any) {
-    console.error('Transition error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

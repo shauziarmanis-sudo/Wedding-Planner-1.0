@@ -1,18 +1,14 @@
 "use server";
 
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { GoogleSheetsService } from "@/lib/googleService";
-import { withRateLimit } from "@/lib/rateLimiter";
-import { SHEETS_CONFIG } from "@/config/sheets";
-import { MASTER_CHECKLIST } from "@/lib/checklist-master-data";
-import { ChecklistTask, ChecklistProgress, UserProfile, TaskPhase, TaskStatus, AdatSwitchResult } from "@/types/checklist.types";
-import { filterTasksByAdat, AdatType, ADAT_TYPES } from "@/lib/adat-registry";
 import { nanoid } from "nanoid";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
+import { MASTER_CHECKLIST } from "@/lib/checklist-master-data";
+import { ChecklistTask, ChecklistProgress, TaskPhase, TaskStatus, AdatSwitchResult } from "@/types/checklist.types";
+import { filterTasksByAdat, AdatType, ADAT_TYPES } from "@/lib/adat-registry";
 import { z } from "zod";
 import { subDays } from "date-fns";
+import { revalidatePath } from "next/cache";
 
-// ── Zod Schemas ──
 const UpdateStatusSchema = z.object({
   task_id: z.string().min(1),
   status: z.enum(["BELUM", "PROSES", "SELESAI", "SKIP"]),
@@ -38,102 +34,34 @@ const AddTaskSchema = z.object({
   assignee: z.enum(["PENGANTIN_PRIA", "PENGANTIN_WANITA", "BERDUA", "KELUARGA"]),
 });
 
-// ── Helpers ──
-function getSessionData() {
-  return getServerSession(authOptions);
-}
-
-function parseRow(row: string[], weddingDate?: string): ChecklistTask {
-  const daysBefore = parseInt(row[2]) || 0;
+function calculateDeadlineAndOverdue(task: ChecklistTask, weddingDateStr?: string) {
+  let deadline_date: Date | undefined = undefined;
+  let is_overdue = false;
   
-  let deadlineDate: Date | undefined = undefined;
-  let isOverdue = false;
-  if (weddingDate) {
-    deadlineDate = subDays(new Date(weddingDate), daysBefore);
-    if (deadlineDate < new Date() && row[9] !== "SELESAI") {
-      isOverdue = true;
+  if (weddingDateStr) {
+    deadline_date = subDays(new Date(weddingDateStr), task.days_before);
+    if (deadline_date < new Date() && task.status !== "SELESAI") {
+      is_overdue = true;
     }
   }
-
-  let adatTags: AdatType[] | ['ALL'] = ['ALL'];
-  try {
-    if (row[6]) adatTags = JSON.parse(row[6]);
-  } catch (e) {
-    // Fallback if it's old format (string instead of JSON)
-    if (row[6] && row[6] !== 'ALL') {
-      adatTags = row[6].split(',') as any;
-    }
-  }
-
-  return {
-    task_id: row[0] || "",
-    phase_label: (row[1] || "H-6 Bulan") as TaskPhase,
-    days_before: daysBefore,
-    category: row[3] as ChecklistTask["category"],
-    title: row[4] || "",
-    description: row[5] || "",
-    adat_tags: adatTags,
-    is_required: row[7] === "TRUE",
-    is_custom: row[8] === "TRUE",
-    status: (["BELUM", "PROSES", "SELESAI", "SKIP"].includes(row[9]?.trim()?.toUpperCase()) ? row[9].trim().toUpperCase() : "BELUM") as TaskStatus,
-    completed_at: row[10] || null,
-    assignee: (row[11]?.trim() || "BERDUA") as ChecklistTask["assignee"],
-    notes: row[12] || "",
-    added_by_adat_switch: row[13] === "TRUE",
-    deadline_date: deadlineDate,
-    is_overdue: isOverdue,
-  };
+  
+  return { ...task, deadline_date, is_overdue };
 }
 
-function taskToRow(task: ChecklistTask): string[] {
-  return [
-    task.task_id,
-    task.phase_label,
-    task.days_before.toString(),
-    task.category,
-    task.title,
-    task.description,
-    JSON.stringify(task.adat_tags),
-    task.is_required ? "TRUE" : "FALSE",
-    task.is_custom ? "TRUE" : "FALSE",
-    task.status,
-    task.completed_at || "",
-    task.assignee,
-    task.notes || "",
-    task.added_by_adat_switch ? "TRUE" : "FALSE",
-  ];
-}
-
-// ── 1. Init Checklist ──
 export async function initChecklist(
   profile: z.infer<typeof UserProfileSchema>
 ): Promise<{ success: boolean; taskCount: number; error?: string }> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) {
-    return { success: false, taskCount: 0, error: "Unauthorized" };
-  }
-
-  const parsed = UserProfileSchema.safeParse(profile);
-  if (!parsed.success) {
-    return { success: false, taskCount: 0, error: "Data profil tidak valid" };
-  }
-
   try {
-    const service = new GoogleSheetsService(session.accessToken);
-    
-    // Ensure the sheet exists before trying to read it
-    await service.addSheetWithHeaders(
-      session.spreadsheetId, 
-      SHEETS_CONFIG.tabs.checklist, 
-      ['task_id', 'phase_label', 'days_before', 'category', 'title', 'description', 'adat_tags', 'is_required', 'is_custom', 'status', 'completed_at', 'assignee', 'notes', 'added_by_adat_switch']
-    );
+    const { supabase, user } = await getAuthenticatedUser();
+    const parsed = UserProfileSchema.safeParse(profile);
+    if (!parsed.success) return { success: false, taskCount: 0, error: "Data profil tidak valid" };
 
-    let existing: string[][] | null = null;
-    try {
-      existing = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
-    } catch (e) {
-      // ignore
-    }
+    // Check existing
+    const { data: existing, error: fetchError } = await supabase
+      .from('checklist_tasks')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1);
 
     if (existing && existing.length > 0) {
       return { success: true, taskCount: existing.length, error: "Checklist sudah ada" };
@@ -141,58 +69,44 @@ export async function initChecklist(
 
     const filtered = filterTasksByAdat(MASTER_CHECKLIST, parsed.data.adat_type as AdatType, parsed.data.adat_secondary as AdatType);
 
-    const rowsToAppend = filtered.map((task) => [
-      `ck_${nanoid(8)}`,
-      task.phase_label,
-      task.days_before,
-      task.category,
-      task.title,
-      task.description,
-      JSON.stringify(task.adat_tags),
-      task.is_required ? "TRUE" : "FALSE",
-      "FALSE", // is_custom
-      "BELUM", // status
-      "", // completed_at
-      task.assignee,
-      "", // notes
-      "FALSE", // added_by_adat_switch
-    ]);
+    const rowsToAppend = filtered.map((task) => ({
+      user_id: user.id,
+      task_id: `ck_${nanoid(8)}`,
+      phase_label: task.phase_label,
+      days_before: task.days_before,
+      category: task.category,
+      title: task.title,
+      description: task.description,
+      adat_tags: task.adat_tags,
+      is_required: task.is_required,
+      source: 'MASTER',
+      status: 'BELUM',
+      assignee: task.assignee,
+      notes: '',
+    }));
 
-    // Batch append all rows at once
-    await service.appendRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, rowsToAppend);
+    const { error: insertError } = await supabase.from('checklist_tasks').insert(rowsToAppend);
+    if (insertError) throw insertError;
 
-    // Update Metadata
-    await updateMetadataAfterInit(service, session.spreadsheetId, parsed.data);
+    // Update metadata (wedding profile)
+    await supabase.from('wedding_profiles').upsert({
+      user_id: user.id,
+      adat_type: parsed.data.adat_type,
+      adat_secondary: parsed.data.adat_secondary || null,
+      wedding_date: parsed.data.wedding_date,
+      guest_count_estimate: parsed.data.guest_count_estimate,
+      pasangan_pria_suku: parsed.data.pasangan_pria_suku || null,
+      pasangan_wanita_suku: parsed.data.pasangan_wanita_suku || null,
+    });
 
+    revalidatePath("/dashboard/checklist");
     return { success: true, taskCount: filtered.length };
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error init checklist:", msg);
-    return { success: false, taskCount: 0, error: msg };
+  } catch (error: any) {
+    console.error("Error init checklist:", error);
+    return { success: false, taskCount: 0, error: error.message };
   }
 }
 
-async function updateMetadataAfterInit(service: GoogleSheetsService, spreadsheetId: string, data: any) {
-  // Try to find if metadata exists and update it, simple append for now.
-  // Assuming 'Metadata' sheet has columns: Key, Value
-  // We'll append if we can't find it easily. A real app might update properly.
-  // Actually, we'll skip complex update for now unless needed, or just append rows if missing.
-  try {
-     const metadataRows = [
-       ["adat_type", data.adat_type],
-       ["wedding_date", data.wedding_date],
-       ["guest_count_estimate", data.guest_count_estimate.toString()],
-     ];
-     if (data.adat_secondary) {
-        metadataRows.push(["adat_secondary", data.adat_secondary]);
-     }
-     await service.appendRows(spreadsheetId, "Metadata!A:B", metadataRows);
-  } catch (e) {
-    console.error("Failed to write metadata", e);
-  }
-}
-
-// ── 2. Get Checklist ──
 export async function getChecklist(
   filters?: {
     phase?: TaskPhase
@@ -202,203 +116,124 @@ export async function getChecklist(
     show_custom?: boolean
   }
 ): Promise<ChecklistTask[]> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) return [];
-
   try {
-    const service = new GoogleSheetsService(session.accessToken);
-    const rows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
-    if (!rows) return [];
-
-    // Need wedding date from metadata to calculate deadlines
-    let weddingDate: string | undefined;
-    try {
-      const metadata = await service.readRows(session.spreadsheetId, "Metadata!A:B");
-      if (metadata) {
-        const dateRow = metadata.find(r => r[0] === 'wedding_date');
-        if (dateRow) weddingDate = dateRow[1];
-      }
-    } catch(e) {}
-
-    let tasks = rows.filter((r) => r[0]).map(r => parseRow(r, weddingDate));
+    const { supabase, user } = await getAuthenticatedUser();
+    
+    let query = supabase.from('checklist_tasks').select('*').eq('user_id', user.id);
     
     if (filters) {
-      if (filters.phase) tasks = tasks.filter((t) => t.phase_label === filters.phase);
-      if (filters.assignee) tasks = tasks.filter((t) => t.assignee === filters.assignee);
-      if (filters.category) tasks = tasks.filter((t) => t.category === filters.category);
-      if (filters.status) {
-        if (filters.status === 'NOT_SELESAI') {
-          tasks = tasks.filter((t) => t.status !== 'SELESAI');
-        } else {
-          tasks = tasks.filter((t) => t.status === filters.status);
-        }
-      }
+      if (filters.phase) query = query.eq('phase_label', filters.phase);
+      if (filters.assignee) query = query.eq('assignee', filters.assignee);
+      if (filters.category) query = query.eq('category', filters.category);
       if (filters.show_custom !== undefined) {
-        tasks = tasks.filter((t) => t.is_custom === filters.show_custom);
+        query = query.eq('source', filters.show_custom ? 'CUSTOM' : 'MASTER');
+      }
+      if (filters.status) {
+        if (filters.status === 'NOT_SELESAI') query = query.neq('status', 'SELESAI');
+        else query = query.eq('status', filters.status);
       }
     }
-    return tasks;
+    
+    const { data: tasks, error } = await query;
+    if (error) throw error;
+    
+    // Get wedding date to calc deadlines
+    const { data: profile } = await supabase
+      .from('wedding_profiles')
+      .select('wedding_date')
+      .eq('user_id', user.id)
+      .single();
+
+    return (tasks as any[]).map(t => calculateDeadlineAndOverdue({
+      ...t,
+      is_custom: t.source === 'CUSTOM',
+      added_by_adat_switch: false // Legacy flag, no longer heavily used if we just rebuild the list
+    }, profile?.wedding_date)) as ChecklistTask[];
   } catch (error) {
     console.error("Error fetching checklist:", error);
     return [];
   }
 }
 
-// ── 3. Update Task Status ──
 export async function updateTaskStatus(
   input: z.infer<typeof UpdateStatusSchema>
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) {
-    return { success: false, error: "Unauthorized" };
-  }
-
-  const parsed = UpdateStatusSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: "Data tidak valid" };
-  }
-
   try {
-    const service = new GoogleSheetsService(session.accessToken);
-    const rowIndex = await service.findRowIndex(
-      session.spreadsheetId,
-      SHEETS_CONFIG.ranges.checklist,
-      0,
-      parsed.data.task_id
-    );
+    const { supabase, user } = await getAuthenticatedUser();
+    const parsed = UpdateStatusSchema.safeParse(input);
+    if (!parsed.success) return { success: false, error: "Data tidak valid" };
 
-    if (rowIndex === null) {
-      return { success: false, error: "Task tidak ditemukan" };
-    }
+    const { error } = await supabase
+      .from('checklist_tasks')
+      .update({
+        status: parsed.data.status,
+        notes: parsed.data.notes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('task_id', parsed.data.task_id)
+      .eq('user_id', user.id);
 
-    const completedAt = parsed.data.status === "SELESAI" ? new Date().toISOString() : "";
-    const notes = parsed.data.notes ?? "";
+    if (error) throw error;
 
-    // Columns: J is status (index 9), K is completed_at (index 10), L is assignee (11), M is notes (12).
-    // Wait, let's verify columns:
-    // A=0: task_id, B=1: phase_label, C=2: days_before, D=3: category, E=4: title, F=5: description
-    // G=6: adat_tags, H=7: is_required, I=8: is_custom, J=9: status, K=10: completed_at, L=11: assignee, M=12: notes, N=13: added_by_adat_switch
-    
-    // We want to update status, completed_at, and notes. Notes is column M.
-    // However, googleSheetsService.updateRow only accepts one array. Let's read the row first to update safely, or just update the specific cells.
-    
-    // Better to fetch row, modify, and update the whole row to prevent column offset issues.
-    const allRows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
-    const targetRowArray = allRows ? allRows[rowIndex - 2] : null; // rowIndex is 1-based + header
-    
-    if (!targetRowArray) {
-      return { success: false, error: "Task data not found" };
-    }
-    
-    targetRowArray[9] = parsed.data.status;
-    targetRowArray[10] = completedAt;
-    targetRowArray[12] = notes;
-    
-    await service.updateRow(
-      session.spreadsheetId,
-      `Checklist!A${rowIndex}:N${rowIndex}`,
-      targetRowArray
-    );
-
+    revalidatePath("/dashboard/checklist");
     return { success: true };
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    return { success: false, error: msg };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
 
 export async function batchUpdateTaskStatus(
   updates: { task_id: string; status: TaskStatus; notes?: string }[]
 ): Promise<{ success: boolean; error?: string }> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) return { success: false, error: "Unauthorized" };
-  if (updates.length === 0) return { success: true };
-
   try {
-    const service = new GoogleSheetsService(session.accessToken);
-    const allRows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
-    if (!allRows) return { success: false, error: "Task data not found" };
-
-    const batchUpdates: { range: string; values: string[][] }[] = [];
-    const updateMap = new Map(updates.map(u => [u.task_id, u]));
-
-    for (let i = 0; i < allRows.length; i++) {
-      const rowId = allRows[i][0];
-      if (updateMap.has(rowId)) {
-        const update = updateMap.get(rowId)!;
-        const rowIndex = i + 2; // +1 for header, +1 for 1-based index
-        const completedAt = update.status === "SELESAI" ? new Date().toISOString() : "";
+    const { supabase, user } = await getAuthenticatedUser();
+    
+    for (const update of updates) {
+      const { error } = await supabase
+        .from('checklist_tasks')
+        .update({
+          status: update.status,
+          ...(update.notes !== undefined && { notes: update.notes }),
+          updated_at: new Date().toISOString()
+        })
+        .eq('task_id', update.task_id)
+        .eq('user_id', user.id);
         
-        batchUpdates.push({
-          range: `Checklist!J${rowIndex}`,
-          values: [[update.status]]
-        });
-        batchUpdates.push({
-          range: `Checklist!K${rowIndex}`,
-          values: [[completedAt]]
-        });
-        if (update.notes !== undefined) {
-          batchUpdates.push({
-            range: `Checklist!M${rowIndex}`,
-            values: [[update.notes]]
-          });
-        }
-      }
+      if (error) throw error;
     }
 
-    if (batchUpdates.length > 0) {
-      await withRateLimit(async () => {
-        await service['sheets'].spreadsheets.values.batchUpdate({
-          spreadsheetId: session.spreadsheetId,
-          requestBody: {
-            valueInputOption: 'USER_ENTERED',
-            data: batchUpdates,
-          },
-        });
-      });
-    }
-
+    revalidatePath("/dashboard/checklist");
     return { success: true };
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    return { success: false, error: msg };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
 
 export async function renamePhase(oldPhase: string, newPhase: string): Promise<{ success: boolean; error?: string }> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) return { success: false, error: "Unauthorized" };
-
   try {
-    const service = new GoogleSheetsService(session.accessToken);
-    const rows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
-    if (!rows) return { success: false, error: "No data found" };
+    const { supabase, user } = await getAuthenticatedUser();
+    
+    const { error } = await supabase
+      .from('checklist_tasks')
+      .update({ phase_label: newPhase })
+      .eq('phase_label', oldPhase)
+      .eq('user_id', user.id);
 
-    const updatedRows = rows.map(row => {
-      if (row[1] === oldPhase) {
-        row[1] = newPhase;
-      }
-      return row;
-    });
+    if (error) throw error;
 
-    await service.updateRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, updatedRows);
+    revalidatePath("/dashboard/checklist");
     return { success: true };
-  } catch (error) {
-    console.error("Error renaming phase:", error);
+  } catch (error: any) {
     return { success: false, error: "Failed to rename phase" };
   }
 }
 
-// ── 4. Get Checklist Progress ──
 export async function getChecklistProgress(): Promise<{
   overall: { total: number; completed: number; percentage: number };
   by_phase: ChecklistProgress[];
   by_assignee: Record<string, { total: number; completed: number }>;
   critical_overdue: ChecklistTask[];
 }> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) return { overall: {total:0, completed:0, percentage:0}, by_phase: [], by_assignee: {}, critical_overdue: [] };
-
   try {
     const tasks = await getChecklist();
     const uniquePhases = Array.from(new Set(tasks.map((t) => t.phase_label)));
@@ -429,7 +264,7 @@ export async function getChecklistProgress(): Promise<{
       }
     });
 
-    const critical_overdue = tasks.filter(t => t.is_overdue).slice(0, 5); // top 5 overdue
+    const critical_overdue = tasks.filter(t => t.is_overdue).slice(0, 5);
 
     return {
       overall: {
@@ -442,66 +277,50 @@ export async function getChecklistProgress(): Promise<{
       critical_overdue
     };
   } catch (error) {
-    console.error("Error fetching progress:", error);
     return { overall: {total:0, completed:0, percentage:0}, by_phase: [], by_assignee: {}, critical_overdue: [] };
   }
 }
 
-
-// ── 5. Add Custom Task ──
 export async function addCustomTask(
   input: z.infer<typeof AddTaskSchema>
 ): Promise<{ success: boolean; error?: string; task_id?: string }> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) {
-    return { success: false, error: "Unauthorized" };
-  }
-
-  const parsed = AddTaskSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: "Data tidak valid" };
-  }
-
   try {
-    const service = new GoogleSheetsService(session.accessToken);
+    const { supabase, user } = await getAuthenticatedUser();
+    const parsed = AddTaskSchema.safeParse(input);
+    if (!parsed.success) return { success: false, error: "Data tidak valid" };
+
     const taskId = `ck_${nanoid(8)}`;
 
-    const newTaskRow = [
-      taskId,
-      parsed.data.phase_label,
-      (parsed.data.days_before || 0).toString(),
-      parsed.data.category,
-      parsed.data.title,
-      parsed.data.description,
-      JSON.stringify(["ALL"]), // adat_tags
-      parsed.data.is_required ? "TRUE" : "FALSE",
-      "TRUE", // is_custom
-      "BELUM", // status
-      "", // completed_at
-      parsed.data.assignee,
-      "", // notes
-      "FALSE", // added_by_adat_switch
-    ];
+    const insertData = {
+      user_id: user.id,
+      task_id: taskId,
+      phase_label: parsed.data.phase_label,
+      days_before: parsed.data.days_before || 0,
+      category: parsed.data.category,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      adat_tags: ["ALL"],
+      is_required: parsed.data.is_required,
+      source: 'CUSTOM',
+      status: 'BELUM',
+      assignee: parsed.data.assignee,
+      notes: '',
+    };
 
-    await service.appendRow(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, newTaskRow);
+    const { error } = await supabase.from('checklist_tasks').insert(insertData);
+    if (error) throw error;
 
+    revalidatePath("/dashboard/checklist");
     return { success: true, task_id: taskId };
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    return { success: false, error: msg };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
 
-// ── 6. Preview Adat Switch ──
 export async function previewAdatSwitch(
   new_adat: AdatType,
   new_adat_secondary?: AdatType
 ): Promise<{ success: boolean; data?: AdatSwitchResult; error?: string }> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) {
-    return { success: false, error: "Unauthorized" };
-  }
-
   try {
     const tasks = await getChecklist();
     
@@ -509,7 +328,6 @@ export async function previewAdatSwitch(
     const tasks_kept: ChecklistTask[] = [];
     const tasks_completed_kept: ChecklistTask[] = [];
 
-    // 1. Analyze existing tasks
     for (const task of tasks) {
       if (task.is_custom) {
         tasks_kept.push(task);
@@ -524,7 +342,6 @@ export async function previewAdatSwitch(
       if (matchesNewAdat) {
         tasks_kept.push(task);
       } else {
-        // Doesn't match new adat. Should be removed unless it's completed.
         if (task.status === 'SELESAI') {
           tasks_completed_kept.push(task);
         } else {
@@ -533,7 +350,6 @@ export async function previewAdatSwitch(
       }
     }
 
-    // 2. Identify new tasks to add
     const existingTitles = new Set([...tasks_kept, ...tasks_completed_kept].map(t => t.title));
     const potentialNewTasks = filterTasksByAdat(MASTER_CHECKLIST, new_adat, new_adat_secondary);
     
@@ -544,12 +360,9 @@ export async function previewAdatSwitch(
         task_id: `ck_${nanoid(8)}`,
         is_custom: false,
         status: 'BELUM' as TaskStatus,
-        completed_at: null,
         notes: '',
-        added_by_adat_switch: true
       }) as ChecklistTask);
 
-    // 3. Generate Warnings
     const conflict_warnings: string[] = [
       "Perhatian: Proses ganti adat akan menghapus semua tugas standar saat ini dan menggantinya dengan yang baru.",
       "Tugas Custom (buatan Anda sendiri) akan tetap dipertahankan.",
@@ -577,162 +390,65 @@ export async function previewAdatSwitch(
   }
 }
 
-// ── 7. Execute Adat Switch ──
 export async function executeAdatSwitch(
   new_adat: AdatType,
   new_adat_secondary?: AdatType
 ): Promise<{ success: boolean; data?: AdatSwitchResult; error?: string }> {
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) {
-    return { success: false, error: "Unauthorized" };
-  }
-
   try {
+    const { supabase, user } = await getAuthenticatedUser();
     const preview = await previewAdatSwitch(new_adat, new_adat_secondary);
     if (!preview.success || !preview.data) throw new Error(preview.error || "Preview failed");
 
-    const service = new GoogleSheetsService(session.accessToken);
-    const allRows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
-    if (!allRows) throw new Error("Could not read checklist data");
+    // Delete all MASTER tasks
+    const { error: delError } = await supabase
+      .from('checklist_tasks')
+      .delete()
+      .eq('user_id', user.id)
+      .eq('source', 'MASTER');
+      
+    if (delError) throw delError;
 
-    // We will COMPLETELY replace the checklist. Keep only custom tasks.
-    const customTasksRows = allRows.filter(row => row[8] === "TRUE"); // is_custom is col 8 (I)
-    
-    // Clear the existing checklist range (A2:N)
-    await service.clearRange(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
-
-    // Generate ALL tasks for the new adat from master data (full replacement, not delta)
+    // Generate new MASTER tasks
     const allNewAdatTasks = filterTasksByAdat(MASTER_CHECKLIST, new_adat, new_adat_secondary);
-    const newAdatRows = allNewAdatTasks.map((task) => [
-      `ck_${nanoid(8)}`,
-      task.phase_label,
-      task.days_before,
-      task.category,
-      task.title,
-      task.description,
-      JSON.stringify(task.adat_tags),
-      task.is_required ? "TRUE" : "FALSE",
-      "FALSE", // is_custom
-      "BELUM", // status
-      "", // completed_at
-      task.assignee,
-      "", // notes
-      "FALSE", // added_by_adat_switch
-    ]);
+    const newAdatRows = allNewAdatTasks.map((task) => ({
+      user_id: user.id,
+      task_id: `ck_${nanoid(8)}`,
+      phase_label: task.phase_label,
+      days_before: task.days_before,
+      category: task.category,
+      title: task.title,
+      description: task.description,
+      adat_tags: task.adat_tags,
+      is_required: task.is_required,
+      source: 'MASTER',
+      status: 'BELUM',
+      assignee: task.assignee,
+      notes: '',
+    }));
 
-    const finalRowsToAppend = [...customTasksRows, ...newAdatRows];
-
-    // Append everything back
-    if (finalRowsToAppend.length > 0) {
-      await service.appendRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist, finalRowsToAppend);
+    if (newAdatRows.length > 0) {
+      const { error: insertError } = await supabase.from('checklist_tasks').insert(newAdatRows);
+      if (insertError) throw insertError;
     }
 
-    // 4. Update Metadata
-    const metadataUpdates: { range: string; values: string[][] }[] = [];
-    const metaRows = await service.readRows(session.spreadsheetId, "Metadata!A:B");
-    if (metaRows) {
-      for (let i = 0; i < metaRows.length; i++) {
-        if (metaRows[i][0] === 'adat_type') {
-          metadataUpdates.push({ range: `Metadata!B${i+1}`, values: [[new_adat]] });
-        }
-        if (metaRows[i][0] === 'adat_secondary') {
-          metadataUpdates.push({ range: `Metadata!B${i+1}`, values: [[new_adat_secondary || ""]] });
-        }
-      }
-      
-      // If adat_type didn't exist before, append it.
-      if (!metaRows.some(r => r[0] === 'adat_type')) {
-          await service.appendRow(session.spreadsheetId, "Metadata!A:B", ["adat_type", new_adat]);
-      }
+    // Update metadata
+    await supabase.from('wedding_profiles').upsert({
+      user_id: user.id,
+      adat_type: new_adat,
+      adat_secondary: new_adat_secondary || null,
+    });
 
-      // If adat_secondary didn't exist before and we have it now, append it.
-      if (new_adat_secondary && !metaRows.some(r => r[0] === 'adat_secondary')) {
-          await service.appendRow(session.spreadsheetId, "Metadata!A:B", ["adat_secondary", new_adat_secondary]);
-      } else if (!new_adat_secondary && metaRows.some(r => r[0] === 'adat_secondary')) {
-          // If we are removing secondary adat, we should clear it.
-          const secIndex = metaRows.findIndex(r => r[0] === 'adat_secondary');
-          if (secIndex >= 0) {
-            metadataUpdates.push({ range: `Metadata!B${secIndex+1}`, values: [[""]] });
-          }
-      }
-      
-      if (metadataUpdates.length > 0) {
-        await withRateLimit(async () => {
-          await service['sheets'].spreadsheets.values.batchUpdate({
-            spreadsheetId: session.spreadsheetId,
-            requestBody: {
-              valueInputOption: 'USER_ENTERED',
-              data: metadataUpdates,
-            },
-          });
-        });
-      }
-    }
-
+    revalidatePath("/dashboard/checklist");
     return { success: true, data: preview.data };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
 }
 
-// ── 8. Undo Adat Switch ──
 export async function undoAdatSwitch(
   previous_adat: AdatType
 ): Promise<{ success: boolean; error?: string }> {
-  // A simplified undo: we can just delete all tasks where added_by_adat_switch = TRUE,
-  // and set any SKIP tasks back to BELUM. This is a naive implementation based on the prompt's instructions.
-  const session = await getSessionData();
-  if (!session?.accessToken || !session?.spreadsheetId) {
-    return { success: false, error: "Unauthorized" };
-  }
-
-  try {
-    const service = new GoogleSheetsService(session.accessToken);
-    const allRows = await service.readRows(session.spreadsheetId, SHEETS_CONFIG.ranges.checklist);
-    if (!allRows) throw new Error("Could not read checklist data");
-
-    const updates: { range: string; values: string[][] }[] = [];
-
-    for (let i = 0; i < allRows.length; i++) {
-      const addedBySwitch = allRows[i][13] === 'TRUE';
-      const status = allRows[i][9];
-
-      if (addedBySwitch && status !== 'SELESAI') {
-        // Rather than deleting the row entirely which can be tricky with sheets API, 
-        // setting to SKIP hides it. Or we can clear it. The prompt says "hapus (status = SKIP)".
-        allRows[i][9] = 'SKIP';
-        updates.push({ range: `Checklist!J${i + 2}`, values: [['SKIP']] });
-      } else if (status === 'SKIP' && !addedBySwitch) {
-        // Restore skipped tasks
-        allRows[i][9] = 'BELUM';
-        updates.push({ range: `Checklist!J${i + 2}`, values: [['BELUM']] });
-      }
-    }
-
-    if (updates.length > 0) {
-      await withRateLimit(async () => {
-        await service['sheets'].spreadsheets.values.batchUpdate({
-          spreadsheetId: session.spreadsheetId,
-          requestBody: {
-            valueInputOption: 'USER_ENTERED',
-            data: updates,
-          },
-        });
-      });
-    }
-
-    // Restore metadata
-    const metaRows = await service.readRows(session.spreadsheetId, "Metadata!A:B");
-    if (metaRows) {
-      for (let i = 0; i < metaRows.length; i++) {
-        if (metaRows[i][0] === 'adat_type') {
-           await service.updateRow(session.spreadsheetId, `Metadata!B${i+1}`, [previous_adat]);
-        }
-      }
-    }
-
-    return { success: true };
-  } catch(e: any) {
-    return { success: false, error: e.message };
-  }
+  // For a real app, you might want to restore from a backup or re-fetch previous adat.
+  // We will just re-execute the adat switch with the previous adat.
+  return executeAdatSwitch(previous_adat);
 }

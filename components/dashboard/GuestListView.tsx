@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useUser } from "@/components/auth/AuthProvider";
 import { Guest, GuestStats } from "@/types/guest.types";
-import { getGuests, getGuestStats, ensureGuestSheet } from "@/actions/guest.actions";
+import { getGuests, getGuestStats } from "@/actions/guest.actions";
 import { getMetadata } from "@/actions/metadata";
 import GuestDashboardClient from "../guests/GuestDashboardClient";
 
 export default function GuestListView() {
-  const { data: session } = useSession();
+  const user = useUser();
   const [guests, setGuests] = useState<Guest[]>([]);
   const [stats, setStats] = useState<GuestStats | null>(null);
   const [metadata, setMetadata] = useState<any>(null);
@@ -20,7 +20,6 @@ export default function GuestListView() {
     async function init() {
       try {
         setLoading(true);
-        await ensureGuestSheet();
         const [gData, sData, mData] = await Promise.all([
           getGuests(),
           getGuestStats(),

@@ -1,25 +1,31 @@
-"use server";
+'use server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
-import { GoogleSheetsService } from "@/lib/googleService";
-import { SHEETS_CONFIG } from "@/config/sheets";
-
-/**
- * Public RSVP action — does NOT require user session.
- * Called from the public invitation page.
- * Needs spreadsheetId and accessToken passed directly (from query/env).
- */
 export async function submitRSVP(data: {
-  spreadsheetId: string;
-  slug: string;
-  rsvpStatus: "CONFIRMED" | "DECLINED";
-  message?: string;
+  rsvp_token: string
+  rsvp_status: 'HADIR' | 'TIDAK_HADIR'
+  actual_pax?: number
+  message?: string
 }): Promise<{ success: boolean; error?: string; guestName?: string }> {
-  // For public RSVP, we'd need a service account or public sheet.
-  // For now, this is a skeleton that will be connected later
-  // when we implement public invitation sharing.
-  return {
-    success: true,
-    guestName: "Tamu",
-    error: undefined,
-  };
+  const supabase = createAdminClient()
+  const { data: guest, error: fetchError } = await supabase
+    .from('guests')
+    .select('id, name, user_id')
+    .eq('rsvp_token', data.rsvp_token)
+    .single()
+
+  if (fetchError || !guest) return { success: false, error: 'Tamu tidak ditemukan' }
+
+  const { error } = await supabase
+    .from('guests')
+    .update({
+      rsvp_status: data.rsvp_status,
+      actual_pax: data.actual_pax ?? 1,
+      rsvp_at: new Date().toISOString(),
+      notes: data.message ? data.message : undefined // Jika ada notes
+    })
+    .eq('rsvp_token', data.rsvp_token)
+
+  if (error) return { success: false, error: error.message }
+  return { success: true, guestName: guest.name }
 }

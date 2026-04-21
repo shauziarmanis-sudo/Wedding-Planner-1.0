@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { getMetadata } from "@/actions/metadata";
 import { AdatInfoCard } from "@/components/checklist/AdatInfoCard";
 import { Button } from "@/components/ui/button";
@@ -10,8 +9,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 export default async function AdatSettingsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/");
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/");
 
   const metadata = await getMetadata();
   const currentAdat = metadata?.adat_type;
@@ -19,8 +19,6 @@ export default async function AdatSettingsPage() {
 
   async function handleUndo() {
     "use server";
-    // For now we assume the previous adat was MODERN if we are undoing.
-    // In a full implementation, we'd store history in Google Sheets.
     await undoAdatSwitch('MODERN');
     revalidatePath("/wedding/settings/adat");
   }

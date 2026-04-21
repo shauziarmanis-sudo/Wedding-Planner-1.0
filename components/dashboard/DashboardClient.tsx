@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { signOut } from "next-auth/react";
+import { createClient } from '@/lib/supabase/client';
 import { Heart, Users, Wallet, LogOut, ListTodo, Store, FileText } from "lucide-react";
 import WeddingDashboard from "./WeddingDashboard";
 import GuestListView from "./GuestListView";

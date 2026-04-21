@@ -1,12 +1,12 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
 export default async function Home() {
-  const session = await getServerSession(authOptions);
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (session) {
+  if (user) {
     redirect("/dashboard");
   }
 
@@ -19,9 +19,10 @@ export default async function Home() {
         <p className="text-xl text-body max-w-[600px] text-center">
           Platform pasangan dari Wedding Planning otomatis berubah menjadi Household Financial Dashboard.
         </p>
+        <LandingNav user={user ? { ...user, name: user.user_metadata?.full_name } : null} />
         <div className="flex gap-4">
           <Link 
-            href="/api/auth/signin" 
+            href="/auth/signin" 
             className="px-8 py-3 rounded-full bg-cta text-white font-semibold hover:opacity-90 transition-opacity"
           >
             Mulai Sekarang
