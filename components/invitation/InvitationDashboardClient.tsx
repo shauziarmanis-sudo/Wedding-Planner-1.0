@@ -4,8 +4,9 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { InvitationTemplate, UserInvitation, InvitationConfig, InvitationPhoto } from "@/types/invitation.types";
 import { createOrSwitchTemplate, publishInvitation, unpublishInvitation } from "@/actions/invitation.actions";
-import { Palette, Eye, BarChart3, LayoutGrid, ArrowLeft, Globe, GlobeLock, ExternalLink, Copy, Check } from "lucide-react";
+import { Palette, Eye, BarChart3, LayoutGrid, ArrowLeft, Globe, GlobeLock, ExternalLink, Copy, Check, Wand2 } from "lucide-react";
 import toast from "react-hot-toast";
+import Link from "next/link";
 
 import TemplateGallery from "@/components/invitation/TemplateGallery";
 import InvitationEditorPanel from "@/components/invitation/InvitationEditorPanel";
@@ -129,7 +130,11 @@ export default function InvitationDashboardClient({ initialInvitation, templates
           <h2 className="text-xl font-bold text-gray-900">Undangan Digital</h2>
           <p className="text-sm text-gray-500">Template: {invitation.template?.name || invitation.template_id}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href="/dashboard/builder"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all">
+            <Wand2 className="w-4 h-4" /> Buka Visual Builder
+          </Link>
           <button onClick={() => setActiveView('gallery')}
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
             <LayoutGrid className="w-4 h-4" /> Ganti Template
