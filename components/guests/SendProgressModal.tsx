@@ -12,6 +12,7 @@ interface Props {
   guests: Guest[];
   metadata: any;
   template: WATemplate;
+  invStats?: any;
   onComplete: (sentIds: string[], skippedIds: string[]) => void;
   onClose: () => void;
 }
@@ -23,7 +24,7 @@ interface HistoryItem {
   time: string;
 }
 
-export default function SendProgressModal({ isOpen, guests, metadata, template, onComplete, onClose }: Props) {
+export default function SendProgressModal({ isOpen, guests, metadata, template, invStats, onComplete, onClose }: Props) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sentIds, setSentIds] = useState<string[]>([]);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
@@ -45,7 +46,11 @@ export default function SendProgressModal({ isOpen, guests, metadata, template, 
   const currentGuest = guests[currentIndex];
 
   const getInvitationLink = (guest: Guest) => {
-    return `${typeof window !== 'undefined' ? window.location.origin : ''}/invitation/${guest.rsvp_token || guest.guest_id}`;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    if (invStats?.isPublished && invStats?.publicSlug) {
+      return `${baseUrl}/i/${invStats.publicSlug}?g=${guest.rsvp_token || guest.guest_id}`;
+    }
+    return `${baseUrl}/invitation/${guest.rsvp_token || guest.guest_id}`;
   };
 
   const handleSend = async () => {

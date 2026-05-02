@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from '@/lib/supabase/client';
-import { Heart, Users, Wallet, LogOut, ListTodo, Store, FileText } from "lucide-react";
+import { Heart, Users, Wallet, LogOut, ListTodo, Store, FileText, Mail } from "lucide-react";
 import WeddingDashboard from "./WeddingDashboard";
 import GuestListView from "./GuestListView";
 import FinanceDashboard from "./FinanceDashboard";
 import ChecklistDashboard from "../checklist/ChecklistDashboard";
 import BudgetDashboard from "../budget/BudgetDashboard";
 import DocumentDashboard from "../documents/DocumentDashboard";
+import InvitationDashboard from "./InvitationDashboard";
 
-type TabKey = "wedding" | "checklist" | "documents" | "budget" | "guests" | "finance";
+type TabKey = "wedding" | "checklist" | "documents" | "budget" | "guests" | "invitation" | "finance";
 
 interface Props {
   userName: string;
@@ -27,6 +28,7 @@ const tabs = [
   { key: "documents" as TabKey, label: "Dokumen Resmi", icon: FileText },
   { key: "budget" as TabKey, label: "Vendor & Budget", icon: Store },
   { key: "guests" as TabKey, label: "Guest List", icon: Users },
+  { key: "invitation" as TabKey, label: "Undangan Digital", icon: Mail },
   { key: "finance" as TabKey, label: "Keuangan", icon: Wallet },
 ];
 
@@ -38,6 +40,14 @@ const pageVariants = {
 
 export default function DashboardClient({ userName, userEmail, userImage, status, initialReligion }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>(status === "MARRIED" ? "finance" : "wedding");
+
+  useEffect(() => {
+    const handleSwitchTab = (e: any) => {
+      if (e.detail) setActiveTab(e.detail as TabKey);
+    };
+    window.addEventListener('switchTab', handleSwitchTab);
+    return () => window.removeEventListener('switchTab', handleSwitchTab);
+  }, []);
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -174,6 +184,7 @@ export default function DashboardClient({ userName, userEmail, userImage, status
               {activeTab === "documents" && <DocumentDashboard initialReligion={initialReligion} />}
               {activeTab === "budget" && <BudgetDashboard />}
               {activeTab === "guests" && <GuestListView />}
+              {activeTab === "invitation" && <InvitationDashboard />}
               {activeTab === "finance" && <FinanceDashboard />}
             </motion.div>
           </AnimatePresence>

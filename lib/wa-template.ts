@@ -32,3 +32,12 @@ Merupakan suatu kehormatan dan kebahagiaan bagi kami apabila Bapak/Ibu/Saudara/i
 Hormat kami,
 ${bride} & ${groom}`;
 }
+
+export function generateWABlastTextWithInvitation(
+  metadata: any,
+  guest: Guest,
+  invitationBaseUrl: string
+): string {
+  const personalLink = `${invitationBaseUrl}?g=${guest.rsvp_token || guest.guest_id}`;
+  return generateWABlastText(metadata, guest, personalLink);
+}

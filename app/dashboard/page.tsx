@@ -11,7 +11,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      userName={user?.user_metadata?.full_name || user?.email || "User"}
+      userName={user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"}
       userEmail={user?.email || ""}
       userImage={user?.user_metadata?.avatar_url || undefined}
       status={appStatus.status as "WEDDING" | "MARRIED"}

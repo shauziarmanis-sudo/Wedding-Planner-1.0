@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search, Users, CheckCircle2, Clock, Wallet,
   Plus, Send, MoreHorizontal, Copy, MessageCircle, Edit2, Trash2,
-  ChevronDown, FileSpreadsheet, UserPlus, X,
+  ChevronDown, FileSpreadsheet, UserPlus, X, Eye
 } from "lucide-react";
 import { Guest, GuestStats, GuestCategory } from "@/types/guest.types";
 import { getGuests, getGuestStats, deleteGuest, markBulkInvitationSent } from "@/actions/guest.actions";
+import { getInvitationStats } from "@/actions/invitation.actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import GiftRecordModal from "./GiftRecordModal";
@@ -63,6 +64,11 @@ export default function GuestDashboardClient({ initialGuests, initialStats, meta
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<GuestCategory | 'ALL'>('ALL');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [invStats, setInvStats] = useState<any>(null);
+
+  useEffect(() => {
+    getInvitationStats().then(setInvStats);
+  }, []);
 
   // Modal states
   const [showAddDropdown, setShowAddDropdown] = useState(false);
@@ -91,9 +97,10 @@ export default function GuestDashboardClient({ initialGuests, initialStats, meta
   }, []);
 
   const refresh = async () => {
-    const [g, s] = await Promise.all([getGuests(), getGuestStats()]);
+    const [g, s, i] = await Promise.all([getGuests(), getGuestStats(), getInvitationStats()]);
     setGuests(g);
     setStats(s);
+    setInvStats(i);
   };
 
   const filteredGuests = guests.filter(g => {
@@ -115,14 +122,19 @@ export default function GuestDashboardClient({ initialGuests, initialStats, meta
   };
 
   const copyLink = (guest: Guest) => {
-    const link = `${window.location.origin}/invitation/${guest.rsvp_token || guest.guest_id}`;
+    const link = invStats?.isPublished 
+      ? `${window.location.origin}/i/${invStats.publicSlug}?g=${guest.rsvp_token || guest.guest_id}`
+      : `${window.location.origin}/invitation/${guest.rsvp_token || guest.guest_id}`;
     navigator.clipboard.writeText(link);
     toast.success("Link undangan berhasil disalin!");
     setOpenActionMenu(null);
   };
 
   const openWA = async (guest: Guest) => {
-    const link = `${window.location.origin}/invitation/${guest.rsvp_token || guest.guest_id}`;
+    let link = `${window.location.origin}/invitation/${guest.rsvp_token || guest.guest_id}`;
+    if (invStats?.isPublished) {
+      link = `${window.location.origin}/i/${invStats.publicSlug}?g=${guest.rsvp_token || guest.guest_id}`;
+    }
     const text = generateWABlastText(metadata, guest, link);
     window.open(`https://wa.me/${guest.phone_wa}?text=${encodeURIComponent(text)}`, '_blank');
     await markBulkInvitationSent([guest.guest_id]);
@@ -415,6 +427,11 @@ export default function GuestDashboardClient({ initialGuests, initialStats, meta
                             <button onClick={() => copyLink(guest)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
                               <Copy className="w-4 h-4 text-gray-400" /> Salin Link Undangan
                             </button>
+                            {invStats?.isPublished && (
+                              <a href={`/i/${invStats.publicSlug}?g=${guest.rsvp_token || guest.guest_id}`} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
+                                <Eye className="w-4 h-4 text-purple-500" /> Lihat Undangan Digital
+                              </a>
+                            )}
                             <button onClick={() => openWA(guest)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-sm text-left transition-colors">
                               <MessageCircle className="w-4 h-4 text-[#25D366]" /> Kirim WA Sekarang
                             </button>
@@ -457,6 +474,7 @@ export default function GuestDashboardClient({ initialGuests, initialStats, meta
         isOpen={showBulkSendModal}
         guests={guests}
         metadata={metadata}
+        invStats={invStats}
         onClose={() => setShowBulkSendModal(false)}
         onComplete={handleBulkSendComplete}
       />

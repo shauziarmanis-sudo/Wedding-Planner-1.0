@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Users, UserCheck, TrendingUp, Store } from "lucide-react";
+import { Users, UserCheck, TrendingUp, Store, Globe, GlobeLock, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getGuests } from "@/actions/guest.actions";
 import { getVendors } from "@/actions/vendor.actions";
+import { getInvitationStats } from "@/actions/invitation.actions";
 import { Guest } from "@/types/guest.types";
 import { Vendor } from "@/types/vendor.types";
 
@@ -34,15 +35,17 @@ function AnimatedNumber({ value }: { value: number }) {
 export default function WeddingDashboard() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [invStats, setInvStats] = useState<any>(null);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const [g, v] = await Promise.all([getGuests(), getVendors()]);
+    const [g, v, i] = await Promise.all([getGuests(), getVendors(), getInvitationStats()]);
     setGuests(g);
     setVendors(v);
+    setInvStats(i);
   }
 
   const totalBudget = vendors.reduce((s, v) => s + (v.actual_cost > 0 ? v.actual_cost : v.estimated_cost), 0);
@@ -108,6 +111,40 @@ export default function WeddingDashboard() {
             <p className="text-sm font-medium text-[#212121]/60">Total Vendor</p>
           </div>
           <p className="text-3xl font-bold text-[#212121]"><AnimatedNumber value={vendors.length} /></p>
+        </motion.div>
+
+        {/* Status Undangan Widget */}
+        <motion.div variants={item} whileHover={{ y: -4 }} className="bg-white rounded-2xl p-6 shadow-lg shadow-black/5 border border-black/[0.03] sm:col-span-3 lg:col-span-1">
+          <div className="flex items-center gap-3 mb-3">
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${invStats?.isPublished ? 'bg-emerald-500/10' : 'bg-[#C2185B]/10'}`}>
+              {invStats?.isPublished ? <Globe className="w-5 h-5 text-emerald-600" /> : <GlobeLock className="w-5 h-5 text-[#C2185B]" />}
+            </div>
+            <p className="text-sm font-medium text-[#212121]/60">Undangan Digital</p>
+          </div>
+          {invStats ? (
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-3xl font-bold text-[#212121]"><AnimatedNumber value={invStats.viewCount || 0} /></p>
+                <p className="text-[10px] font-bold text-[#212121]/40 uppercase tracking-wider mt-1">Total Views</p>
+              </div>
+              {invStats.isPublished ? (
+                <a href={`/i/${invStats.publicSlug}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors">
+                  <ExternalLink className="w-3.5 h-3.5" /> Buka Live
+                </a>
+              ) : (
+                <button onClick={() => window.dispatchEvent(new CustomEvent('switchTab', { detail: 'invitation' }))} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C2185B]/10 text-[#C2185B] text-xs font-semibold hover:bg-[#C2185B]/20 transition-colors">
+                  Setup Undangan
+                </button>
+              )}
+            </div>
+          ) : (
+             <div className="flex justify-between items-end h-full pb-1">
+               <p className="text-sm font-medium text-[#212121]/40">Belum disetup</p>
+               <button onClick={() => window.dispatchEvent(new CustomEvent('switchTab', { detail: 'invitation' }))} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#C2185B]/10 text-[#C2185B] text-xs font-semibold hover:bg-[#C2185B]/20 transition-colors">
+                 Mulai Setup
+               </button>
+             </div>
+          )}
         </motion.div>
       </div>
 

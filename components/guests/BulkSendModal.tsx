@@ -13,6 +13,7 @@ interface Props {
   isOpen: boolean;
   guests: Guest[];
   metadata: any;
+  invStats?: any;
   onClose: () => void;
   onComplete: (sentIds: string[], skippedIds: string[]) => void;
 }
@@ -51,7 +52,7 @@ const WA_TEMPLATES: WATemplate[] = [
   },
 ];
 
-export default function BulkSendModal({ isOpen, guests, metadata, onClose, onComplete }: Props) {
+export default function BulkSendModal({ isOpen, guests, metadata, invStats, onClose, onComplete }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const [campaignName, setCampaignName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<GuestCategory | 'ALL'>('ALL');
@@ -79,10 +80,18 @@ export default function BulkSendModal({ isOpen, guests, metadata, onClose, onCom
     }).length;
   };
 
+  const getPreviewLink = (guest: Guest) => {
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    if (invStats?.isPublished && invStats?.publicSlug) {
+      return `${baseUrl}/i/${invStats.publicSlug}?g=${guest.rsvp_token || guest.guest_id}`;
+    }
+    return `${baseUrl}/invitation/${guest.rsvp_token || guest.guest_id}`;
+  };
+
   const previewMessage = targetGuests.length > 0
     ? selectedTemplate.preview(
         targetGuests[0].name,
-        `${typeof window !== 'undefined' ? window.location.origin : ''}/invitation/${targetGuests[0].rsvp_token || targetGuests[0].guest_id}`,
+        getPreviewLink(targetGuests[0]),
         metadata
       )
     : selectedTemplate.preview('Nama Tamu', 'https://link-undangan.com', metadata);
@@ -120,12 +129,25 @@ export default function BulkSendModal({ isOpen, guests, metadata, onClose, onCom
 
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Info Banner */}
-              <div className="flex items-start gap-3 bg-blue-50 rounded-2xl p-4">
-                <Info className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
-                <p className="text-sm text-blue-700">
-                  Undangan akan dikirim satu per satu melalui WhatsApp Web secara manual. Anda bisa melewati tamu tertentu.
-                </p>
-              </div>
+              {!invStats?.isPublished ? (
+                <div className="flex items-start gap-3 bg-amber-50 rounded-2xl p-4 border border-amber-200/50">
+                  <Info className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-800">Undangan digital belum dipublish.</p>
+                    <p className="text-xs text-amber-700 mt-1 mb-2">Link yang dikirim adalah link RSVP standar. Publish undangan terlebih dahulu untuk pengalaman terbaik.</p>
+                    <button onClick={() => { onClose(); window.dispatchEvent(new CustomEvent('switchTab', { detail: 'invitation' })); }} className="text-xs font-bold text-amber-700 hover:text-amber-900 bg-amber-100 px-3 py-1.5 rounded-lg inline-flex items-center gap-1 transition-colors">
+                      Setup Undangan Digital <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-3 bg-blue-50 rounded-2xl p-4">
+                  <Info className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+                  <p className="text-sm text-blue-700">
+                    Undangan akan dikirim satu per satu melalui WhatsApp Web secara manual. Anda bisa melewati tamu tertentu.
+                  </p>
+                </div>
+              )}
 
               {/* Campaign Name */}
               <div>
@@ -239,6 +261,7 @@ export default function BulkSendModal({ isOpen, guests, metadata, onClose, onCom
         guests={targetGuests}
         metadata={metadata}
         template={selectedTemplate}
+        invStats={invStats}
         onComplete={handleSendComplete}
         onClose={handleClose}
       />

@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const type = searchParams.get('type')
 
   if (code) {
     const cookieStore = await cookies()
@@ -24,6 +25,10 @@ export async function GET(request: Request) {
     )
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // If this is an email confirmation, redirect to signin with success message
+      if (type === 'signup' || type === 'email') {
+        return NextResponse.redirect(`${origin}/auth/signin?registered=true`)
+      }
       const next = searchParams.get('next') ?? '/dashboard'
       const safeNext = next.startsWith('/') ? next : '/dashboard'
       return NextResponse.redirect(`${origin}${safeNext}`)
