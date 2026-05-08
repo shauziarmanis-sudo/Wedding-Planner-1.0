@@ -15,8 +15,10 @@ interface Props {
  */
 export default function PuckPublicRenderer({ puckData }: Props) {
   return (
-    <div className="min-h-screen">
-      <Render config={puckConfig} data={puckData} />
+    <div className="w-full flex justify-center bg-gray-100 min-h-screen">
+      <main className="w-full max-w-[430px] min-h-screen bg-white shadow-2xl relative overflow-x-hidden">
+        <Render config={puckConfig} data={puckData} />
+      </main>
     </div>
   );
 }

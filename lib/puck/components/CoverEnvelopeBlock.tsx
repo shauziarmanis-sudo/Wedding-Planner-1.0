@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail } from "lucide-react";
-import { SharedStyleProps, getSectionStyle, getAccentAnimClass, getLayoutClasses } from "./shared";
+import { SharedStyleProps, getSectionStyle, getContentStyle, renderAccent, getLayoutClasses } from "./shared";
 
 export type CoverEnvelopeProps = SharedStyleProps & {
   groomName: string;
@@ -22,7 +22,6 @@ export function CoverEnvelopeBlock(props: CoverEnvelopeProps) {
     invitationText,
     buttonText,
     accentColor,
-    backgroundColor,
     textColor,
     headingFont,
     bodyFont,
@@ -31,7 +30,6 @@ export function CoverEnvelopeBlock(props: CoverEnvelopeProps) {
     backgroundImageUrl,
     overlayOpacity,
     accentSize,
-    accentAnimation,
     contentAlignX,
     contentAlignY,
     isEditor = false,
@@ -63,8 +61,8 @@ export function CoverEnvelopeBlock(props: CoverEnvelopeProps) {
   }, [isOpen, isEditor]);
 
   const bgStyle = getSectionStyle(props);
-  const animClass = getAccentAnimClass(accentAnimation);
   const layoutClass = getLayoutClasses(contentAlignX, contentAlignY);
+  const contentStyle = getContentStyle(props);
 
   return (
     <AnimatePresence>
@@ -83,13 +81,13 @@ export function CoverEnvelopeBlock(props: CoverEnvelopeProps) {
             />
           )}
 
-          <div className="relative z-10 w-full max-w-md">
+          <div className="relative z-10 w-full max-w-md flex flex-col" style={contentStyle}>
             {/* Envelope Icon */}
             <motion.div
               initial={{ scale: 0, rotate: -20 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ delay: 0.2, duration: 0.6, type: "spring" }}
-              className={`rounded-full mb-8 flex items-center justify-center ${animClass} ${contentAlignX === 'center' ? 'mx-auto' : contentAlignX === 'right' ? 'ml-auto' : ''}`}
+              className={`rounded-full flex items-center justify-center ${contentAlignX === 'center' ? 'mx-auto' : contentAlignX === 'right' ? 'ml-auto' : ''}`}
               style={{
                 backgroundColor: `${accentColor}20`,
                 border: `2px solid ${accentColor}50`,
@@ -97,7 +95,11 @@ export function CoverEnvelopeBlock(props: CoverEnvelopeProps) {
                 height: accentSize * 2,
               }}
             >
-              <Mail style={{ color: accentColor, width: accentSize, height: accentSize }} />
+              {props.accentType === "none" ? (
+                <Mail style={{ color: accentColor, width: accentSize, height: accentSize }} />
+              ) : (
+                renderAccent(props)
+              )}
             </motion.div>
 
             {/* Names */}

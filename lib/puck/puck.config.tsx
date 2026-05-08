@@ -130,6 +130,29 @@ const styleFields = {
   bgZoom: { type: "number" as const, label: "Zoom Background (%) - 0 untuk Cover", min: 0, max: 400 },
   bgPosX: { type: "number" as const, label: "Posisi Background Horizontal (%)", min: 0, max: 100 },
   bgPosY: { type: "number" as const, label: "Posisi Background Vertikal (%)", min: 0, max: 100 },
+  lineHeight: { type: "number" as const, label: "Spasi Baris Teks (Line Height)", min: 1, max: 3, step: 0.1 },
+  elementSpacing: { type: "number" as const, label: "Jarak Antar Teks (Spacing)", min: 0, max: 100 },
+  accentType: {
+    type: "select" as const,
+    label: "Bentuk Aksen / Ornamen",
+    options: [
+      { label: "Love (Hati)", value: "heart" },
+      { label: "Daun (Leaf)", value: "leaf" },
+      { label: "Bunga (Flower)", value: "flower" },
+      { label: "Cincin (Ring)", value: "ring" },
+      { label: "Bintang (Star)", value: "star" },
+      { label: "Tanpa Aksen", value: "none" },
+    ],
+  },
+  enableAccent: {
+    type: "radio" as const,
+    label: "Gunakan Aksen?",
+    options: [
+      { label: "Ya", value: true },
+      { label: "Tidak", value: false },
+    ],
+  },
+  accentSpacing: { type: "number" as const, label: "Jarak Aksen (Margin Y)", min: 0, max: 100 },
 };
 
 const defaultStyle = {
@@ -153,6 +176,11 @@ const defaultStyle = {
   bgZoom: 0,
   bgPosX: 50,
   bgPosY: 50,
+  lineHeight: 1.6,
+  elementSpacing: 24,
+  accentType: "heart",
+  enableAccent: true,
+  accentSpacing: 24,
 };
 
 // ── Konfigurasi Utama ────────────────────────────────────────────

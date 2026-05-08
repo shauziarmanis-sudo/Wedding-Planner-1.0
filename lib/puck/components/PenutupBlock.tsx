@@ -1,7 +1,6 @@
 "use client";
 
-import { Heart } from "lucide-react";
-import { SharedStyleProps, getSectionStyle, getAccentAnimClass, getLayoutClasses } from "./shared";
+import { SharedStyleProps, getSectionStyle, getContentStyle, renderAccentContainer, getLayoutClasses } from "./shared";
 
 export type PenutupProps = SharedStyleProps & {
   closingText: string;
@@ -23,7 +22,6 @@ export function PenutupBlock(props: PenutupProps) {
     brideFamily,
     brandName,
     accentColor,
-    backgroundColor,
     textColor,
     headingFont,
     bodyFont,
@@ -31,15 +29,13 @@ export function PenutupBlock(props: PenutupProps) {
     bodySize,
     backgroundImageUrl,
     overlayOpacity,
-    accentSize,
-    accentAnimation,
     contentAlignX,
     contentAlignY,
   } = props;
 
   const bgStyle = getSectionStyle(props);
-  const animClass = getAccentAnimClass(accentAnimation);
   const layoutClass = getLayoutClasses(contentAlignX, contentAlignY);
+  const contentStyle = getContentStyle(props);
 
   return (
     <section className="relative" style={bgStyle}>
@@ -51,24 +47,19 @@ export function PenutupBlock(props: PenutupProps) {
       )}
       <div className={`relative z-10 h-full flex flex-col`}>
         {/* Main Closing Content */}
-        <div className={`py-20 px-6 ${layoutClass}`}>
-          <div className="max-w-2xl mx-auto w-full">
-            {/* Ornament */}
-            <div className={`flex items-center gap-3 mb-8 ${animClass} ${contentAlignX === 'center' ? 'justify-center' : contentAlignX === 'left' ? 'justify-start' : 'justify-end'}`}>
-              <div className="h-px w-16 opacity-30" style={{ backgroundColor: accentColor }} />
-              <Heart className="opacity-40" style={{ color: accentColor, width: accentSize, height: accentSize }} />
-              <div className="h-px w-16 opacity-30" style={{ backgroundColor: accentColor }} />
-            </div>
+        <div className={`py-20 px-6`}>
+          <div className={`max-w-2xl mx-auto w-full flex flex-col ${layoutClass}`} style={contentStyle}>
+            {renderAccentContainer(props)}
 
             <p
-              className="leading-relaxed opacity-85 mb-10"
+              className="opacity-85"
               style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize + 2 }}
             >
               {closingText}
             </p>
 
             <p
-              className="tracking-widest uppercase opacity-60 mb-6"
+              className="tracking-widest uppercase opacity-60"
               style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize - 2 }}
             >
               {familyLabel}
@@ -76,24 +67,24 @@ export function PenutupBlock(props: PenutupProps) {
 
             {/* Couple Names */}
             <h2
-              className="font-bold mb-10 leading-tight"
+              className="font-bold leading-tight"
               style={{ color: textColor, fontFamily: headingFont, fontSize: headingSize }}
             >
               {groomName} <span style={{ color: accentColor }}>&amp;</span> {brideName}
             </h2>
 
             {/* Family Names */}
-            <div className="grid grid-cols-2 gap-8 max-w-md mx-auto mb-8">
-              <div>
-                <p className="tracking-widest uppercase opacity-50 mb-2" style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize - 4 }}>
+            <div className="flex gap-8 justify-center w-full max-w-md mx-auto mt-4">
+              <div className="flex flex-col flex-1" style={contentStyle}>
+                <p className="tracking-widest uppercase opacity-50" style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize - 4 }}>
                   Keluarga Besar
                 </p>
                 <p className="font-semibold" style={{ color: textColor, fontFamily: headingFont, fontSize: headingSize * 0.4 }}>
                   {groomFamily}
                 </p>
               </div>
-              <div>
-                <p className="tracking-widest uppercase opacity-50 mb-2" style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize - 4 }}>
+              <div className="flex flex-col flex-1" style={contentStyle}>
+                <p className="tracking-widest uppercase opacity-50" style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize - 4 }}>
                   Keluarga Besar
                 </p>
                 <p className="font-semibold" style={{ color: textColor, fontFamily: headingFont, fontSize: headingSize * 0.4 }}>
@@ -102,17 +93,12 @@ export function PenutupBlock(props: PenutupProps) {
               </div>
             </div>
 
-            {/* Bottom Ornament */}
-            <div className={`flex items-center justify-center gap-3 ${animClass}`}>
-              <div className="h-px w-16 opacity-30" style={{ backgroundColor: accentColor }} />
-              <Heart className="opacity-40" style={{ color: accentColor, width: accentSize, height: accentSize }} />
-              <div className="h-px w-16 opacity-30" style={{ backgroundColor: accentColor }} />
-            </div>
+            {renderAccentContainer(props)}
           </div>
         </div>
 
         {/* Footer / Copyright */}
-        <div className="border-t py-6 px-6 text-center bg-black/5" style={{ borderColor: `${accentColor}20` }}>
+        <div className="border-t py-6 px-6 text-center bg-black/5 mt-auto" style={{ borderColor: `${accentColor}20` }}>
           <p className="font-semibold tracking-wider opacity-60" style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize }}>
             {brandName}
           </p>

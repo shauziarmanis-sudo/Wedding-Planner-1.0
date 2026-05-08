@@ -1,7 +1,8 @@
 "use client";
 
-import { Calendar, Heart } from "lucide-react";
-import { SharedStyleProps, getSectionStyle, getAccentAnimClass, getLayoutClasses } from "./shared";
+import { Calendar } from "lucide-react";
+
+import { SharedStyleProps, getSectionStyle, getContentStyle, renderAccentContainer, getLayoutClasses } from "./shared";
 
 export type WeddingHeroProps = SharedStyleProps & {
   groomName: string;
@@ -18,17 +19,12 @@ export function WeddingHeroBlock(props: WeddingHeroProps) {
     weddingDate,
     tagline,
     backgroundType,
-    accentColor,
-    backgroundColor,
     textColor,
     headingFont,
     bodyFont,
     headingSize,
     bodySize,
-    backgroundImageUrl,
     overlayOpacity,
-    accentSize,
-    accentAnimation,
     contentAlignX,
     contentAlignY,
   } = props;
@@ -38,9 +34,8 @@ export function WeddingHeroBlock(props: WeddingHeroProps) {
       ? getSectionStyle(props)
       : getSectionStyle({ ...props, backgroundImageUrl: undefined });
 
-  const animClass = getAccentAnimClass(accentAnimation);
-  // getLayoutClasses outputs something like "flex flex-col w-full h-full justify-center items-center text-center"
   const layoutClass = getLayoutClasses(contentAlignX, contentAlignY);
+  const contentStyle = getContentStyle(props);
 
   return (
     <section className="relative min-h-[85vh] overflow-hidden" style={bgStyle}>
@@ -54,26 +49,24 @@ export function WeddingHeroBlock(props: WeddingHeroProps) {
 
       {/* Content */}
       <div className={`relative z-10 p-6 sm:p-12 ${layoutClass}`}>
-        <div className="max-w-2xl w-full">
+        <div className="max-w-2xl w-full flex flex-col" style={contentStyle}>
           <p
-            className="uppercase tracking-[0.35em] mb-6 opacity-80"
+            className="uppercase tracking-[0.35em] opacity-80"
             style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize - 2 }}
           >
             {tagline}
           </p>
 
-          <div className="mb-8">
+          <div className="flex flex-col" style={{ gap: contentStyle.gap }}>
             <h1
               className="font-bold leading-tight"
               style={{ color: textColor, fontFamily: headingFont, fontSize: headingSize }}
             >
               {groomName}
             </h1>
-            <div className={`flex items-center gap-4 my-4 ${animClass} ${contentAlignX === 'center' ? 'justify-center' : contentAlignX === 'left' ? 'justify-start' : 'justify-end'}`}>
-              <div className="h-px w-16 opacity-40" style={{ backgroundColor: accentColor }} />
-              <Heart opacity={0.6} style={{ color: accentColor, width: accentSize, height: accentSize }} />
-              <div className="h-px w-16 opacity-40" style={{ backgroundColor: accentColor }} />
-            </div>
+            
+            {renderAccentContainer(props)}
+
             <h1
               className="font-bold leading-tight"
               style={{ color: textColor, fontFamily: headingFont, fontSize: headingSize }}
@@ -84,7 +77,7 @@ export function WeddingHeroBlock(props: WeddingHeroProps) {
 
           {weddingDate && (
             <div
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border opacity-80"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full border opacity-80 mt-4"
               style={{ borderColor: textColor, color: textColor, fontFamily: bodyFont, fontSize: bodySize }}
             >
               <Calendar className="w-4 h-4" />

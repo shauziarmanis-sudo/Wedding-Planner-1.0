@@ -1,7 +1,6 @@
 "use client";
 
-import { Quote } from "lucide-react";
-import { SharedStyleProps, getSectionStyle, getAccentAnimClass, getLayoutClasses } from "./shared";
+import { SharedStyleProps, getSectionStyle, getContentStyle, renderAccentContainer, getLayoutClasses } from "./shared";
 
 export type QuoteProps = SharedStyleProps & {
   quote: string;
@@ -12,8 +11,6 @@ export function QuoteBlock(props: QuoteProps) {
   const {
     quote,
     author,
-    accentColor,
-    backgroundColor,
     textColor,
     headingFont,
     bodyFont,
@@ -21,15 +18,13 @@ export function QuoteBlock(props: QuoteProps) {
     bodySize,
     backgroundImageUrl,
     overlayOpacity,
-    accentSize,
-    accentAnimation,
     contentAlignX,
     contentAlignY,
   } = props;
 
   const bgStyle = getSectionStyle(props);
-  const animClass = getAccentAnimClass(accentAnimation);
   const layoutClass = getLayoutClasses(contentAlignX, contentAlignY);
+  const contentStyle = getContentStyle(props);
 
   return (
     <section className="py-24 px-6 relative flex justify-center items-center" style={bgStyle}>
@@ -40,15 +35,14 @@ export function QuoteBlock(props: QuoteProps) {
         />
       )}
 
-      <div className={`max-w-2xl mx-auto relative z-10 ${layoutClass}`}>
-        <Quote className={`mb-8 opacity-40 ${animClass} ${contentAlignX === 'center' ? 'mx-auto' : contentAlignX === 'right' ? 'ml-auto' : ''}`} style={{ color: accentColor, width: accentSize * 2, height: accentSize * 2 }} />
+      <div className={`max-w-2xl mx-auto relative z-10 flex flex-col ${layoutClass}`} style={contentStyle}>
+        {renderAccentContainer(props)}
         <p
-          className="italic leading-relaxed mb-8"
+          className="italic"
           style={{ color: textColor, fontFamily: headingFont, fontSize: headingSize * 0.7 }}
         >
-          "{quote}"
+          &quot;{quote}&quot;
         </p>
-        <div className={`h-px w-16 mb-4 opacity-50 ${animClass} ${contentAlignX === 'center' ? 'mx-auto' : contentAlignX === 'right' ? 'ml-auto' : ''}`} style={{ backgroundColor: accentColor }} />
         <p className="font-bold tracking-widest uppercase opacity-80" style={{ color: textColor, fontFamily: bodyFont, fontSize: bodySize }}>
           {author}
         </p>
